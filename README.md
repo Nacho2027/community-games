@@ -9,7 +9,7 @@ Five daily games running on one codebase and one shared rules engine.
 | Daily Numbers | solve | 6 | 100 | Tap three pool numbers and two operators to hit the target |
 | Prediction League | series | 3 | 100 | Call three facts about today's Numbers puzzle, each with your confidence |
 | Faction War | series | 5 | 100 | Read each turn's result and call the next one before the war closes |
-| Daily Mystery | solve | 3 | 100 | Cross-reference alibis and items, then name the suspect the evidence cannot clear |
+| Daily Mystery | solve | 2 | 100 | Cross-reference alibis and items, then name the suspect the evidence cannot clear |
 | Community Market | solve | 3 | 100 | Buy and sell three goods within budget and holding capacity |
 
 ## Quick start
@@ -95,6 +95,20 @@ and balance; it never asked whether the thing was playable. Each now has a regre
 | Prediction League | scoring was `correct ? confidence : 5` | expected value rose with confidence, so **always answering 100% was optimal** and the slider was decorative | proper scoring rule; optimal confidence tracks each question's true rate (52%→55, 73%→75) |
 | Faction War | every turn's crowd votes were published | naive "back the leader" won **200/200 = 100%** | only the opening turn is public; reading it wins about **69.5%**, blind picks about 33.7% |
 | Daily Mystery | clues named three of four suspects outright | the answer was simply the **one name not printed**, 3 named per day every day | clues describe conditions; **0 clues name anyone** |
+| Daily Mystery | four suspects against three accusations | a player who ignored every clue still won **75%**, because each wrong accusation cleared a suspect for free | six suspects against two accusations: blind guessing wins **33.3%**, deduction wins it outright |
+
+### Measured skill signal
+
+A game where guessing beats thinking is not a game, so each one is measured rather than
+assumed. These numbers come from the current modules, not from a design document:
+
+| Game | Guessing or naive play | Playing the game properly |
+| --- | --- | --- |
+| Daily Numbers | 3.6% for random valid triples | **66.5%** for a player using the running-total feedback |
+| Daily Mystery | 33.3% for ignoring every clue | **100%** for following the evidence |
+| Faction War | 43.1% for a blind pick | **66.3%** for reading the opening turn |
+| Prediction League | 100% is never optimal | optimal confidence tracks each question's true rate (65% → say 65) |
+| Community Market | exploring is cheap | an optimal trade is reachable every day, and a test proves it |
 
 ### Cross-game design
 
@@ -105,8 +119,9 @@ Driving games from real puzzle state is what makes them worth returning to:
   a base rate between 20% and 80%, and to resolve both ways across days.
 - The market's capacity is a holding limit, not a trade-volume limit, so a perfect day
   reaches the advertised ceiling.
-- A wrong accusation in Daily Mystery clears that suspect rather than ending the day, and
-  with four suspects and three attempts the case still cannot be brute forced.
+- A wrong accusation in Daily Mystery clears that suspect rather than ending the day, which
+  is why the field is six deep: with fewer suspects, clearing one narrows the case enough
+  that guessing beats reasoning.
 
 ## Publishing
 

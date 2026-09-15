@@ -44,20 +44,32 @@ const JUNK_ACTIONS = [
 ];
 
 describe("mystery meta", () => {
-  it("runs the solve loop with three accusations", () => {
+  it("runs the solve loop with two accusations", () => {
     expect(meta.id).toBe("mystery");
     expect(meta.mode).toBe("solve");
     expect(meta.cadence).toBe("daily");
-    expect(meta.maxAttempts).toBe(3);
+    expect(meta.maxAttempts).toBe(2);
     expect(meta.maxPoints).toBe(100);
   });
 
-  it("cannot be brute forced", () => {
-    // Four suspects and only three accusations means blind guessing cannot clear the
-    // case. The deduction still has to be done.
-    expect(meta.maxAttempts).toBeLessThan(
-      roundFor("2026-03-04").suspects.length + 1,
-    );
+  it("keeps the deduction worth more than guessing", () => {
+    // This replaces a weak guard: `maxAttempts < suspects + 1` (3 < 5) passed while a
+    // player who ignored every clue still won 75% of the time, because each wrong
+    // accusation clears a suspect and narrows the field for free. Proxy assertions are
+    // how this project shipped unplayable games, so measure the actual rate.
+    const suspects = roundFor("2026-03-04").suspects.length;
+    let blind = 0;
+    let carried = 1;
+    for (let index = 0; index < meta.maxAttempts; index += 1) {
+      blind += carried * (1 / (suspects - index));
+      carried *= (suspects - (index + 1)) / (suspects - index);
+    }
+
+    expect(suspects).toBeGreaterThan(meta.maxAttempts);
+    expect(blind).toBeGreaterThan(0.25);
+    expect(blind).toBeLessThan(0.45);
+    // Following the evidence must beat ignoring it, by a clear margin.
+    expect(1 - blind).toBeGreaterThan(blind);
   });
 });
 
@@ -66,20 +78,20 @@ describe("mystery round content", () => {
     expect(roundFor("2026-07-09")).toEqual(roundFor("2026-07-09"));
   });
 
-  it("publishes four suspects with distinct alibis and items", () => {
+  it("publishes six suspects with distinct alibis and items", () => {
     for (const key of keys(60)) {
       const round = roundFor(key);
-      expect(round.suspects).toHaveLength(4);
+      expect(round.suspects).toHaveLength(6);
       expect(new Set(round.suspects.map((suspect) => suspect.name)).size).toBe(
-        4,
+        6,
       );
       // Distinct attributes are what make a single clue eliminate exactly one person.
       expect(
         new Set(round.suspects.map((suspect) => suspect.whereabouts)).size,
-      ).toBe(4);
+      ).toBe(6);
       expect(
         new Set(round.suspects.map((suspect) => suspect.carried)).size,
-      ).toBe(4);
+      ).toBe(6);
     }
   });
 
@@ -113,7 +125,7 @@ describe("mystery round content", () => {
       expect(Object.keys(round).sort()).toEqual(["clues", "seed", "suspects"]);
       expect(round).not.toHaveProperty("culprit");
       expect(round).not.toHaveProperty("culpritId");
-      expect(round.clues).toHaveLength(4);
+      expect(round.clues).toHaveLength(round.suspects.length);
     }
   });
 
@@ -144,7 +156,8 @@ describe("mystery solvability", () => {
     for (const key of keys(200)) {
       const round = roundFor(key);
       const excluded = excludedBy(round);
-      expect(excluded.size).toBe(3);
+      // One clue per innocent suspect, so every suspect but the culprit is ruled out.
+      expect(excluded.size).toBe(round.suspects.length - 1);
       expect(excluded.has(solve(round))).toBe(false);
     }
   });

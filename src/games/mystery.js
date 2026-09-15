@@ -7,9 +7,15 @@ export const meta = {
     "Cross-reference every alibi, then name the suspect the evidence cannot rule out.",
   cadence: "daily",
   mode: "solve",
-  maxAttempts: 3,
+  maxAttempts: 2,
   maxPoints: 100,
 };
+
+// Six suspects against two accusations. With four suspects and three accusations a player
+// who ignored every clue still won 75% of the time, because each wrong accusation clears a
+// suspect and narrows the field for free. Blind guessing now wins 2 in 6 (33.3%), so the
+// deduction is worth three times as much as the coin flip.
+const SUSPECTS = 6;
 
 const NAMES = [
   "The Archivist",
@@ -135,7 +141,7 @@ export function build(periodKey) {
   const rng = rngFor(`mystery:${String(periodKey)}`);
 
   const suspects = shuffle(rng, NAMES)
-    .slice(0, 4)
+    .slice(0, SUSPECTS)
     .map((name, index) => ({ id: `s${index}`, name }));
   const locations = shuffle(rng, LOCATIONS).slice(0, suspects.length);
   const items = shuffle(rng, ITEMS).slice(0, suspects.length);
@@ -207,9 +213,9 @@ export function solve(round) {
 
 // Judge one accusation.
 //
-// A wrong accusation no longer ends the day: it clears that suspect, and the player has
-// three accusations to work with. With four suspects and three attempts the case cannot
-// be brute forced, so the deduction still has to be done.
+// A wrong accusation does not end the day: it clears that suspect and costs one of two
+// accusations. Every clue rules out exactly one person, so the case is fully solvable by
+// reading the evidence, and two accusations is enough to survive a single misread.
 export function judge(round, action, context) {
   if (!isRound(round)) return reject("Today's case could not be loaded.");
 
