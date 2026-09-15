@@ -3,7 +3,8 @@ import { intBetween, rngFor, shuffle } from "../engine/rng.js";
 export const meta = {
   id: "faction",
   title: "Faction War",
-  description: "Five turns. Read each result and call the next one before the war closes.",
+  description:
+    "Five turns. Read each result and call the next one before the war closes.",
   cadence: "daily",
   mode: "series",
   maxAttempts: 5,
@@ -53,7 +54,8 @@ function build(periodKey) {
     const row = {};
     for (const faction of factions)
       row[faction.id] =
-        (strength.get(faction.id) ?? 0) * STRENGTH_WEIGHT + intBetween(rng, 0, NOISE);
+        (strength.get(faction.id) ?? 0) * STRENGTH_WEIGHT +
+        intBetween(rng, 0, NOISE);
     votes.push(row);
   }
   return { factions, votes };
@@ -76,12 +78,17 @@ export function roundFor(periodKey) {
 // Resolve one turn. Each result is published in the reveal, so the next call can be made on
 // real momentum rather than a guess.
 export function judge(round, action, context) {
-  if (!isPlainObject(round) || !Array.isArray(round.factions) || !round.factions.length)
+  if (
+    !isPlainObject(round) ||
+    !Array.isArray(round.factions) ||
+    !round.factions.length
+  )
     return reject("This war is unavailable.");
   if (typeof round.seed !== "string") return reject("This war is unavailable.");
 
   const attempt = Number.isInteger(context?.attempt) ? context.attempt : 1;
-  if (attempt < 1 || attempt > TURNS) return reject("That turn is not part of this war.");
+  if (attempt < 1 || attempt > TURNS)
+    return reject("That turn is not part of this war.");
 
   const factionId = isPlainObject(action) ? action.factionId : undefined;
   const backed =
@@ -98,7 +105,8 @@ export function judge(round, action, context) {
     .map((faction) => ({
       id: faction.id,
       name: faction.name,
-      total: (row[faction.id] ?? 0) + (faction.id === backed.id ? BONUS_TOTAL : 0),
+      total:
+        (row[faction.id] ?? 0) + (faction.id === backed.id ? BONUS_TOTAL : 0),
     }))
     .sort((a, b) => b.total - a.total || a.id.localeCompare(b.id));
 

@@ -15,7 +15,9 @@ export function el(tag, props = {}, children = []) {
   // the inner array is coerced to a string and appended as text rather than as elements.
   for (const child of [].concat(children).flat(Infinity)) {
     if (child === null || child === undefined || child === false) continue;
-    node.append(typeof child === "string" ? document.createTextNode(child) : child);
+    node.append(
+      typeof child === "string" ? document.createTextNode(child) : child,
+    );
   }
   return node;
 }

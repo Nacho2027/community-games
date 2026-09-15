@@ -7,7 +7,9 @@ import { JSDOM } from "jsdom";
 const html = readFileSync("dist/index.html", "utf8");
 const asset = readdirSync("dist/assets").find((name) => name.endsWith(".js"));
 
-const dom = new JSDOM(html, { url: "https://nacho2027.github.io/community-games/" });
+const dom = new JSDOM(html, {
+  url: "https://nacho2027.github.io/community-games/",
+});
 const w = dom.window;
 globalThis.window = w;
 globalThis.document = w.document;
@@ -16,7 +18,10 @@ globalThis.Node = w.Node;
 globalThis.Event = w.Event;
 globalThis.MutationObserver = w.MutationObserver;
 globalThis.localStorage = w.localStorage;
-Object.defineProperty(globalThis, "navigator", { value: w.navigator, configurable: true });
+Object.defineProperty(globalThis, "navigator", {
+  value: w.navigator,
+  configurable: true,
+});
 
 // The app fetches nothing on load in the local adapter path, but stub fetch to be safe.
 globalThis.fetch = async () => {
@@ -46,8 +51,14 @@ const report = {
   hasRawJson: document.body.textContent.includes("{"),
 };
 
-for (const [key, value] of Object.entries(report)) console.log(`  ${key}: ${value}`);
+for (const [key, value] of Object.entries(report))
+  console.log(`  ${key}: ${value}`);
 
-if (!report.appHasChildren || report.gameChips !== 5 || !report.hasBoard || report.hasRawJson)
+if (
+  !report.appHasChildren ||
+  report.gameChips !== 5 ||
+  !report.hasBoard ||
+  report.hasRawJson
+)
   throw new Error("shipped bundle did not mount correctly");
 console.log("\n  shipped bundle mounts and renders all five games");

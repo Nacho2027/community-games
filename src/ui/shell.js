@@ -27,7 +27,9 @@ export function createShell({ root, getState, submit }) {
     syncCommit();
     try {
       const outcome = await submit(active, action);
-      notice = outcome.accepted ? null : (outcome.reason ?? "That move was refused.");
+      notice = outcome.accepted
+        ? null
+        : (outcome.reason ?? "That move was refused.");
     } finally {
       busy = false;
     }
@@ -107,7 +109,9 @@ export function createShell({ root, getState, submit }) {
     return Array.from({ length: view.maxAttempts }, (_, index) => {
       const guess = view.guesses[index];
       if (!guess) return el("span", { class: "pip" });
-      return el("span", { class: guess.state === "correct" ? "pip hit" : "pip used" });
+      return el("span", {
+        class: guess.state === "correct" ? "pip hit" : "pip used",
+      });
     });
   }
 
@@ -120,14 +124,20 @@ export function createShell({ root, getState, submit }) {
         const newest = index === guesses.length - 1;
         const shake = newest && guess.state === "wrong" ? " shake" : "";
         const body = [el("div", { class: "move", text: guess.label })];
-        if (guess.detail) body.push(el("div", { class: "why", text: guess.detail }));
-        return el("li", { class: `row ${guess.state}${shake}` }, [el("div", {}, body)]);
+        if (guess.detail)
+          body.push(el("div", { class: "why", text: guess.detail }));
+        return el("li", { class: `row ${guess.state}${shake}` }, [
+          el("div", {}, body),
+        ]);
       }),
     );
   }
 
   function livePanel(view) {
-    board = createBoard(active, view.round, { attempt: view.attempt, onChange: syncCommit });
+    board = createBoard(active, view.round, {
+      attempt: view.attempt,
+      onChange: syncCommit,
+    });
     commit = el("button", {
       type: "button",
       class: "go",
@@ -153,8 +163,13 @@ export function createShell({ root, getState, submit }) {
     const played = view.guesses.length;
 
     let line = "Not this time.";
-    if (won) line = view.maxAttempts > 1 ? `Solved in ${played} of ${view.maxAttempts}.` : "Solved.";
-    else if (view.maxAttempts > 1) line = `No solve. You used all ${view.maxAttempts}.`;
+    if (won)
+      line =
+        view.maxAttempts > 1
+          ? `Solved in ${played} of ${view.maxAttempts}.`
+          : "Solved.";
+    else if (view.maxAttempts > 1)
+      line = `No solve. You used all ${view.maxAttempts}.`;
 
     const headline = won ? "Solved" : "Out of attempts";
     const gain = el("span", { class: "gain", text: `+${earned}` });
@@ -174,7 +189,8 @@ export function createShell({ root, getState, submit }) {
 
   function stage(state) {
     const view = viewFor(state.ledger, active);
-    if (!view) return el("p", { class: "hint", text: "That game is unavailable." });
+    if (!view)
+      return el("p", { class: "hint", text: "That game is unavailable." });
     return el("section", { class: "board" }, [
       view.finished ? finishedPanel(view) : livePanel(view),
     ]);
@@ -189,7 +205,10 @@ export function createShell({ root, getState, submit }) {
           text: "Copy today's result",
           onclick: onShare,
         }),
-        el("span", { class: "note", text: "Spoiler-free — safe to paste anywhere." }),
+        el("span", {
+          class: "note",
+          text: "Spoiler-free — safe to paste anywhere.",
+        }),
       ]),
       shared ? el("pre", { class: "sharebox", text: shared }) : "",
     ]);
@@ -198,7 +217,14 @@ export function createShell({ root, getState, submit }) {
   function render() {
     const state = getState();
     clear(root);
-    root.append(el("div", { class: "app" }, [header(state), picker(state), stage(state), foot()]));
+    root.append(
+      el("div", { class: "app" }, [
+        header(state),
+        picker(state),
+        stage(state),
+        foot(),
+      ]),
+    );
   }
 
   render();

@@ -1,10 +1,14 @@
 import { rngFor, shuffle } from "../engine/rng.js";
-import { roundFor as numbersRound, solve as numbersSolve } from "./challenge.js";
+import {
+  roundFor as numbersRound,
+  solve as numbersSolve,
+} from "./challenge.js";
 
 export const meta = {
   id: "prediction",
   title: "Prediction League",
-  description: "Three forecasts about today's Numbers puzzle, each with your confidence.",
+  description:
+    "Three forecasts about today's Numbers puzzle, each with your confidence.",
   cadence: "daily",
   mode: "series",
   maxAttempts: 3,
@@ -31,7 +35,8 @@ export const TEMPLATES = [
     id: "largest",
     question: "Will the solution use the largest number in the pool?",
     metric: "today's solution",
-    test: (round, solution) => Math.max(...round.pool) === Math.max(...solution.numbers),
+    test: (round, solution) =>
+      Math.max(...round.pool) === Math.max(...solution.numbers),
   },
   {
     id: "aboveTarget",
@@ -78,14 +83,16 @@ function reject(reason) {
 // squared error instead makes honest reporting the best strategy, and the engine scales
 // the series share by this weight.
 export function calibrationWeight(confidence, correct) {
-  const stated = Math.min(MAX_CONFIDENCE, Math.max(MIN_CONFIDENCE, confidence)) / 100;
+  const stated =
+    Math.min(MAX_CONFIDENCE, Math.max(MIN_CONFIDENCE, confidence)) / 100;
   const truth = correct ? 1 : 0;
   return Math.max(0, Math.min(1, 1 - (stated - truth) ** 2));
 }
 
 // Derived from today's Numbers puzzle. Knowable by reasoning, never visible on the board.
 export function outcomeFor(periodKey, templateId) {
-  const template = TEMPLATES.find((item) => item.id === templateId) ?? TEMPLATES[0];
+  const template =
+    TEMPLATES.find((item) => item.id === templateId) ?? TEMPLATES[0];
   try {
     const puzzle = numbersRound(periodKey);
     const solution = numbersSolve(puzzle);
@@ -113,19 +120,29 @@ export function roundFor(periodKey) {
 }
 
 export function judge(round, action, context) {
-  const periodKey = typeof round?.periodKey === "string" ? round.periodKey : null;
+  const periodKey =
+    typeof round?.periodKey === "string" ? round.periodKey : null;
   if (!periodKey) return reject("Today's questions are unavailable.");
 
   const attempt = Number.isInteger(context?.attempt) ? context.attempt : 1;
-  const question = Array.isArray(round?.questions) ? round.questions[attempt - 1] : null;
+  const question = Array.isArray(round?.questions)
+    ? round.questions[attempt - 1]
+    : null;
   if (!question) return reject("That question is not part of today's round.");
 
-  if (!isPlainObject(action)) return reject("Choose an outcome and a confidence.");
+  if (!isPlainObject(action))
+    return reject("Choose an outcome and a confidence.");
 
   const { pick, confidence } = action;
   if (pick !== "yes" && pick !== "no") return reject("Pick yes or no.");
-  if (!Number.isInteger(confidence) || confidence < MIN_CONFIDENCE || confidence > MAX_CONFIDENCE)
-    return reject(`Confidence must be a whole number from ${MIN_CONFIDENCE} to ${MAX_CONFIDENCE}.`);
+  if (
+    !Number.isInteger(confidence) ||
+    confidence < MIN_CONFIDENCE ||
+    confidence > MAX_CONFIDENCE
+  )
+    return reject(
+      `Confidence must be a whole number from ${MIN_CONFIDENCE} to ${MAX_CONFIDENCE}.`,
+    );
 
   const outcome = outcomeFor(periodKey, question.templateId);
   const correct = pick === outcome;

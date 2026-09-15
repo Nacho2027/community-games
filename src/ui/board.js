@@ -14,7 +14,8 @@ import { el } from "./dom.js";
 const OPS = ["+", "-", "*"];
 
 export function createBoard(gameId, round, options = {}) {
-  const onChange = typeof options.onChange === "function" ? options.onChange : () => {};
+  const onChange =
+    typeof options.onChange === "function" ? options.onChange : () => {};
   const attempt = Number.isInteger(options.attempt) ? options.attempt : 1;
 
   if (gameId === "challenge") return challengeBoard(round, onChange);
@@ -22,7 +23,10 @@ export function createBoard(gameId, round, options = {}) {
   if (gameId === "faction") return factionBoard(round, attempt, onChange);
   if (gameId === "mystery") return mysteryBoard(round, onChange);
   if (gameId === "economy") return economyBoard(round, onChange);
-  return { node: el("p", { class: "hint", text: "This game is unavailable." }), read: () => null };
+  return {
+    node: el("p", { class: "hint", text: "This game is unavailable." }),
+    read: () => null,
+  };
 }
 
 function head(title, text) {
@@ -60,7 +64,8 @@ function challengeBoard(round, onChange) {
     // Empty slots stay blank: the dashed border already reads as "waiting", and a literal
     // underscore in five boxes looks like unrendered placeholder text.
     for (const slot of slotNodes)
-      slot.node.textContent = slot.index === null ? "" : String(pool[slot.index]);
+      slot.node.textContent =
+        slot.index === null ? "" : String(pool[slot.index]);
     for (const slot of opNodes) slot.node.textContent = slot.value ?? "";
 
     for (const tile of tiles) tile.disabled = picked.includes(tile.index);
@@ -69,7 +74,8 @@ function challengeBoard(round, onChange) {
     if (total === null) {
       running.textContent = "";
     } else {
-      const complete = picked.every((value) => value !== null) && ops.every(Boolean);
+      const complete =
+        picked.every((value) => value !== null) && ops.every(Boolean);
       const delta = complete ? target - total : null;
       running.replaceChildren(
         el("span", { text: "Running total " }),
@@ -125,7 +131,12 @@ function challengeBoard(round, onChange) {
       class: "slot",
       onclick: () => clearNumber(index),
     });
-    slotNodes.push({ node, get index() { return picked[index]; } });
+    slotNodes.push({
+      node,
+      get index() {
+        return picked[index];
+      },
+    });
     expression.append(node);
     if (index < 2) {
       const opNode = el("button", {
@@ -133,22 +144,34 @@ function challengeBoard(round, onChange) {
         class: "slot op",
         onclick: () => clearOp(index),
       });
-      opNodes.push({ node: opNode, get value() { return ops[index]; } });
+      opNodes.push({
+        node: opNode,
+        get value() {
+          return ops[index];
+        },
+      });
       expression.append(opNode);
     }
   }
 
-  const opRow = el("div", { class: "tiles" }, OPS.map((value) =>
-    el("button", {
-      type: "button",
-      class: "tile op",
-      text: value,
-      onclick: () => placeOp(value),
-    }),
-  ));
+  const opRow = el(
+    "div",
+    { class: "tiles" },
+    OPS.map((value) =>
+      el("button", {
+        type: "button",
+        class: "tile op",
+        text: value,
+        onclick: () => placeOp(value),
+      }),
+    ),
+  );
 
   const node = el("div", {}, [
-    ...head("Reach the target", "Tap three numbers and two operators. Tap a filled slot to take it back."),
+    ...head(
+      "Reach the target",
+      "Tap three numbers and two operators. Tap a filled slot to take it back.",
+    ),
     el("div", { class: "target" }, [
       el("span", { class: "cap", text: "Target" }),
       el("span", { class: "num", text: String(target) }),
@@ -178,7 +201,11 @@ function predictionBoard(round, attempt, onChange) {
 
   if (!question) {
     return {
-      node: el("div", {}, head("Prediction League", "No questions left for today.")),
+      node: el(
+        "div",
+        {},
+        head("Prediction League", "No questions left for today."),
+      ),
       read: () => null,
     };
   }
@@ -189,20 +216,24 @@ function predictionBoard(round, attempt, onChange) {
   const pickRow = el("div", { class: "cards" });
   const buttons = new Map();
   for (const option of question.options ?? []) {
-    const button = el("button", {
-      type: "button",
-      class: "card",
-      "aria-pressed": "false",
-      onclick: () => {
-        pick = option.id;
-        for (const [id, entry] of buttons)
-          entry.setAttribute("aria-pressed", id === pick ? "true" : "false");
-        onChange();
+    const button = el(
+      "button",
+      {
+        type: "button",
+        class: "card",
+        "aria-pressed": "false",
+        onclick: () => {
+          pick = option.id;
+          for (const [id, entry] of buttons)
+            entry.setAttribute("aria-pressed", id === pick ? "true" : "false");
+          onChange();
+        },
       },
-    }, [
-      el("span", {}, [el("div", { class: "name", text: option.label })]),
-      el("span", { class: "right", text: "" }),
-    ]);
+      [
+        el("span", {}, [el("div", { class: "name", text: option.label })]),
+        el("span", { class: "right", text: "" }),
+      ],
+    );
     buttons.set(option.id, button);
     pickRow.append(button);
   }
@@ -249,33 +280,48 @@ function factionBoard(round, attempt, onChange) {
   let picked = null;
 
   const cards = factions.map((faction) => {
-    const button = el("button", {
-      type: "button",
-      class: "card",
-      "aria-pressed": "false",
-      onclick: () => {
-        picked = faction.id;
-        for (const [id, entry] of pairs)
-          entry.setAttribute("aria-pressed", id === picked ? "true" : "false");
-        onChange();
+    const button = el(
+      "button",
+      {
+        type: "button",
+        class: "card",
+        "aria-pressed": "false",
+        onclick: () => {
+          picked = faction.id;
+          for (const [id, entry] of pairs)
+            entry.setAttribute(
+              "aria-pressed",
+              id === picked ? "true" : "false",
+            );
+          onChange();
+        },
       },
-    }, [
-      el("span", {}, [
-        el("div", { class: "name", text: faction.name }),
-        el("div", {
-          class: "meta",
-          text: attempt === 1 ? `${opening[faction.id] ?? 0} votes in the opening turn` : "committed",
-        }),
-      ]),
-      el("span", { class: "right", text: "back" }),
-    ]);
+      [
+        el("span", {}, [
+          el("div", { class: "name", text: faction.name }),
+          el("div", {
+            class: "meta",
+            text:
+              attempt === 1
+                ? `${opening[faction.id] ?? 0} votes in the opening turn`
+                : "committed",
+          }),
+        ]),
+        el("span", { class: "right", text: "back" }),
+      ],
+    );
     return button;
   });
 
-  const pairs = new Map(factions.map((faction, index) => [faction.id, cards[index]]));
+  const pairs = new Map(
+    factions.map((faction, index) => [faction.id, cards[index]]),
+  );
 
   const node = el("div", {}, [
-    ...head(`Turn ${attempt} of ${round?.turns ?? 5}`, round?.rule ?? "Back a faction."),
+    ...head(
+      `Turn ${attempt} of ${round?.turns ?? 5}`,
+      round?.rule ?? "Back a faction.",
+    ),
     el("div", { class: "cards" }, cards),
   ]);
 
@@ -308,7 +354,11 @@ function mysteryBoard(round, onChange) {
             if (!target) return;
             for (const suspect of suspects) {
               const node = cardFor.get(suspect.id);
-              if (node) node.classList.toggle("cleared", suspect[target.kind] === target.value);
+              if (node)
+                node.classList.toggle(
+                  "cleared",
+                  suspect[target.kind] === target.value,
+                );
             }
           },
         },
@@ -318,31 +368,46 @@ function mysteryBoard(round, onChange) {
   );
 
   const cards = suspects.map((suspect) => {
-    const button = el("button", {
-      type: "button",
-      class: "card",
-      "aria-pressed": "false",
-      onclick: () => {
-        picked = suspect.id;
-        for (const [id, entry] of pairs)
-          entry.setAttribute("aria-pressed", id === picked ? "true" : "false");
-        onChange();
+    const button = el(
+      "button",
+      {
+        type: "button",
+        class: "card",
+        "aria-pressed": "false",
+        onclick: () => {
+          picked = suspect.id;
+          for (const [id, entry] of pairs)
+            entry.setAttribute(
+              "aria-pressed",
+              id === picked ? "true" : "false",
+            );
+          onChange();
+        },
       },
-    }, [
-      el("span", {}, [
-        el("div", { class: "name", text: suspect.name }),
-        el("div", { class: "meta", text: `${suspect.whereabouts} · carrying ${suspect.carried}` }),
-      ]),
-      el("span", { class: "right", text: "accuse" }),
-    ]);
+      [
+        el("span", {}, [
+          el("div", { class: "name", text: suspect.name }),
+          el("div", {
+            class: "meta",
+            text: `${suspect.whereabouts} · carrying ${suspect.carried}`,
+          }),
+        ]),
+        el("span", { class: "right", text: "accuse" }),
+      ],
+    );
     cardFor.set(suspect.id, button);
     return button;
   });
 
-  const pairs = new Map(suspects.map((suspect, index) => [suspect.id, cards[index]]));
+  const pairs = new Map(
+    suspects.map((suspect, index) => [suspect.id, cards[index]]),
+  );
 
   const node = el("div", {}, [
-    ...head("Name the culprit", "Tap a clue to cross out the suspects it rules out, then accuse."),
+    ...head(
+      "Name the culprit",
+      "Tap a clue to cross out the suspects it rules out, then accuse.",
+    ),
     clueList,
     el("div", { class: "cards" }, cards),
   ]);
@@ -355,7 +420,9 @@ function mysteryBoard(round, onChange) {
 function economyBoard(round, onChange) {
   const goods = Array.isArray(round?.goods) ? round.goods : [];
   const capacity = Number.isInteger(round?.capacity) ? round.capacity : 5;
-  const coins = Number.isInteger(round?.startingCoins) ? round.startingCoins : 30;
+  const coins = Number.isInteger(round?.startingCoins)
+    ? round.startingCoins
+    : 30;
 
   const state = new Map(goods.map((good) => [good.id, { buy: 0, sell: 0 }]));
   const readouts = new Map();
@@ -418,8 +485,18 @@ function economyBoard(round, onChange) {
     const view = {};
     const stepper = (side) => {
       const qty = el("span", { class: "qty", text: "0" });
-      const minus = el("button", { type: "button", text: "−", "aria-label": `less ${side}`, onclick: () => step(good.id, side, -1) });
-      const plus = el("button", { type: "button", text: "+", "aria-label": `more ${side}`, onclick: () => step(good.id, side, 1) });
+      const minus = el("button", {
+        type: "button",
+        text: "−",
+        "aria-label": `less ${side}`,
+        onclick: () => step(good.id, side, -1),
+      });
+      const plus = el("button", {
+        type: "button",
+        text: "+",
+        "aria-label": `more ${side}`,
+        onclick: () => step(good.id, side, 1),
+      });
       view[side === "buy" ? "buyQty" : "sellQty"] = qty;
       view[side === "buy" ? "buyPlus" : "sellPlus"] = plus;
       return el("span", { class: "stepper" }, [minus, qty, plus]);
@@ -428,10 +505,19 @@ function economyBoard(round, onChange) {
     const row = el("div", { class: "good" }, [
       el("div", {}, [
         el("div", { class: "label", text: good.name }),
-        el("div", { class: "price", text: `buy ${good.buy} · sell ${good.sell} · ${good.trend}` }),
+        el("div", {
+          class: "price",
+          text: `buy ${good.buy} · sell ${good.sell} · ${good.trend}`,
+        }),
       ]),
-      el("div", {}, [el("div", { class: "note", text: "buy" }), stepper("buy")]),
-      el("div", {}, [el("div", { class: "note", text: "sell" }), stepper("sell")]),
+      el("div", {}, [
+        el("div", { class: "note", text: "buy" }),
+        stepper("buy"),
+      ]),
+      el("div", {}, [
+        el("div", { class: "note", text: "sell" }),
+        stepper("sell"),
+      ]),
     ]);
 
     readouts.set(good.id, view);
@@ -439,7 +525,10 @@ function economyBoard(round, onChange) {
   });
 
   const node = el("div", {}, [
-    ...head("Make your trades", `Spend at most ${coins} coins and hold at most ${capacity} units. Buy low, sell high within the day.`),
+    ...head(
+      "Make your trades",
+      `Spend at most ${coins} coins and hold at most ${capacity} units. Buy low, sell high within the day.`,
+    ),
     el("div", {}, rows),
     summary,
   ]);
@@ -449,8 +538,14 @@ function economyBoard(round, onChange) {
   return {
     node,
     read: () => {
-      const buy = goods.map((good) => ({ goodId: good.id, qty: state.get(good.id).buy }));
-      const sell = goods.map((good) => ({ goodId: good.id, qty: state.get(good.id).sell }));
+      const buy = goods.map((good) => ({
+        goodId: good.id,
+        qty: state.get(good.id).buy,
+      }));
+      const sell = goods.map((good) => ({
+        goodId: good.id,
+        qty: state.get(good.id).sell,
+      }));
       // A no-op is legal, so this always returns an action.
       return { buy, sell };
     },

@@ -1,12 +1,12 @@
 {
   "name": "Community Games",
   "short_name": "Games",
-  "description": "Five short daily games. One attempt each per day.",
+  "description": "Five short daily games. Play your attempts, then share your score without spoilers.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f3f6fa",
-  "theme_color": "#1769e0",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "icons": [
     { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ]

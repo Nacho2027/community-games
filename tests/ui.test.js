@@ -108,8 +108,8 @@ describe("ui shell", () => {
 
   it("renders a chip for every game", async () => {
     const { root } = await mount();
-    const labels = [...root.querySelectorAll(".picker .pick")].map((node) =>
-      node.querySelector("span").textContent,
+    const labels = [...root.querySelectorAll(".picker .pick")].map(
+      (node) => node.querySelector("span").textContent,
     );
     expect(labels).toEqual(registry.map((game) => game.meta.title));
   });
@@ -144,7 +144,9 @@ describe("ui shell", () => {
     const pool = numbersRound().pool;
     byText(root, ".tile", String(pool[0])).click();
 
-    expect(root.querySelector(".running").textContent).toContain(String(pool[0]));
+    expect(root.querySelector(".running").textContent).toContain(
+      String(pool[0]),
+    );
   });
 
   it("keeps the day alive after a wrong answer, and pays less for a later solve", async () => {
@@ -233,9 +235,12 @@ describe("ui shell", () => {
       await commit(root);
     }
 
-    const entry = getState().ledger.progress[`prediction:${periodFor(
-      registry.find((game) => game.meta.id === "prediction"),
-    )}`];
+    const entry =
+      getState().ledger.progress[
+        `prediction:${periodFor(
+          registry.find((game) => game.meta.id === "prediction"),
+        )}`
+      ];
     expect(entry.finished).toBe(true);
     expect(entry.guesses).toHaveLength(3);
     expect(root.querySelector(".verdict")).toBeTruthy();
@@ -271,7 +276,11 @@ describe("ui shell", () => {
     expect(getState().ledger.points).toBe(0);
     expect(root.querySelector(".verdict")).toBeNull();
 
-    byText(root, ".card .name", round.suspects.find((s) => s.id === culprit).name).click();
+    byText(
+      root,
+      ".card .name",
+      round.suspects.find((s) => s.id === culprit).name,
+    ).click();
     await commit(root);
 
     // Solved on the second of three accusations, so it pays the second-attempt rate.
@@ -287,7 +296,9 @@ describe("ui shell", () => {
     const round = roundOf(mystery);
     pick(root, mystery.meta.title);
 
-    const index = round.clues.findIndex((clue) => mystery.clueTarget(clue.text));
+    const index = round.clues.findIndex((clue) =>
+      mystery.clueTarget(clue.text),
+    );
     expect(index).toBeGreaterThanOrEqual(0);
     const clueRow = root.querySelectorAll(".log .row")[index];
     expect(clueRow).toBeTruthy();
@@ -298,7 +309,11 @@ describe("ui shell", () => {
 
   it("surfaces a refused move instead of crashing", async () => {
     const { root } = await mount({
-      submit: async () => ({ accepted: false, reason: "nope, try again", points: 0 }),
+      submit: async () => ({
+        accepted: false,
+        reason: "nope, try again",
+        points: 0,
+      }),
     });
     pick(root, challenge.meta.title);
     await playNumbers(root, numbersSolution());
@@ -315,7 +330,14 @@ describe("ui shell", () => {
           history: days.map((periodKey) => ({
             gameId: "challenge",
             periodKey,
-            guesses: [{ label: "x", state: "correct", detail: null, at: `${periodKey}T00:00:00.000Z` }],
+            guesses: [
+              {
+                label: "x",
+                state: "correct",
+                detail: null,
+                at: `${periodKey}T00:00:00.000Z`,
+              },
+            ],
             solved: true,
             finished: true,
             points: 10,
@@ -326,7 +348,9 @@ describe("ui shell", () => {
     const { root } = await mount({ storage });
 
     expect(root.querySelector(".stat.flame b").textContent).toBe("3");
-    const stats = [...root.querySelectorAll(".stat b")].map((node) => node.textContent);
+    const stats = [...root.querySelectorAll(".stat b")].map(
+      (node) => node.textContent,
+    );
     expect(stats).toContain("30");
   });
 
@@ -366,7 +390,9 @@ describe("ui shell", () => {
       button.click();
       await flush();
       // Degrades to a visible, selectable result instead of throwing.
-      expect(root.querySelector(".sharebox").textContent).toContain("Community Games");
+      expect(root.querySelector(".sharebox").textContent).toContain(
+        "Community Games",
+      );
     } finally {
       Object.defineProperty(navigator, "clipboard", {
         value: original,

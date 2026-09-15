@@ -55,7 +55,13 @@ export function viewFor(ledger, gameId, date = new Date()) {
 // attempts, termination, and scoring.
 export function guess(ledger, gameId, action, date = new Date()) {
   const game = gameById(gameId);
-  if (!game) return { accepted: false, reason: "unknown-game", points: 0, state: ledger };
+  if (!game)
+    return {
+      accepted: false,
+      reason: "unknown-game",
+      points: 0,
+      state: ledger,
+    };
 
   const periodKey = periodFor(game, date);
   return submitGuess(ledger, {
