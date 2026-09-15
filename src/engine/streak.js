@@ -31,22 +31,36 @@ export function dailyStreak(ledger, today = new Date()) {
   return streak;
 }
 
+// "in 2" is the number worth bragging about: it is what other players can compare against.
+function attemptsNote(entry) {
+  if (!entry?.solved) return "";
+  return ` in ${Math.max(1, entry.attemptsUsed ?? 1)}`;
+}
+
+function gameLine(ledger, game, date) {
+  // Read the current progress ledger, not the retired `actions` map: reading the old
+  // shape silently reported every game as "not played" with a total of 0.
+  const entry = ledger?.progress?.[keyFor(game.meta.id, date)];
+  if (entry?.finished !== true) return `${game.meta.title} - not played`;
+  const mark = entry.points > 0 ? "\u2705" : "\u274c";
+  return `${game.meta.title} ${mark} ${entry.points}${attemptsNote(entry)}`;
+}
+
+// One game's result, so a game can be shared on its own with its own link.
+export function shareGame(ledger, game, today = new Date(), url = null) {
+  const line = gameLine(ledger, game, dayKey(today));
+  return url ? `${line}\n${url}` : line;
+}
+
 // Copy-paste summary. Deliberately spoiler-free so it is safe to post publicly.
 export function shareText(ledger, games, today = new Date()) {
   const date = dayKey(today);
   const lines = [`Community Games ${date}`];
   let total = 0;
   for (const game of games) {
-    // Read the current progress ledger, not the retired `actions` map: reading the old
-    // shape silently reported every game as "not played" with a total of 0.
+    lines.push(gameLine(ledger, game, date));
     const entry = ledger?.progress?.[keyFor(game.meta.id, date)];
-    const points = entry?.finished ? entry.points : null;
-    if (points === null) lines.push(`${game.meta.title} - not played`);
-    else
-      lines.push(
-        `${game.meta.title} ${points > 0 ? "\u2705" : "\u274c"} ${points}`,
-      );
-    total += points ?? 0;
+    total += entry?.finished === true ? entry.points : 0;
   }
   const streak = dailyStreak(ledger, today);
   lines.push(`Total ${total}${streak > 1 ? ` \u00b7 streak ${streak}` : ""}`);

@@ -1,15 +1,26 @@
 import { createState, loadState, saveState } from "../state.js";
 import { guess } from "../games/index.js";
 
-// Adapter seam. The UI only ever calls load/save/submit; it never computes a score.
+// Adapter seam. The UI only ever calls load/save/submit/leaderboard; it never computes a
+// score.
 //
 //   load()                 -> Promise<state>
 //   save(state)            -> Promise<boolean>
 //   submit(gameId, action) -> Promise<outcome>
+//   leaderboard(gameId)    -> Promise<board>
 //
 // Local play still routes through the shared guess() entry point, so the browser and the
 // hosted platforms run identical rules. Remote adapters forward the raw action and let the
 // server decide.
+
+// A browser with no server has no shared board. Say so plainly rather than rendering an
+// empty table that looks like a ranking nobody entered.
+const SOLO_BOARD = Object.freeze({
+  available: false,
+  entries: [],
+  you: null,
+  stats: null,
+});
 
 export function createLocalAdapter({ storage = globalThis.localStorage } = {}) {
   let state = loadState(storage);
@@ -31,6 +42,9 @@ export function createLocalAdapter({ storage = globalThis.localStorage } = {}) {
         saveState(state, storage);
       }
       return outcome;
+    },
+    async leaderboard() {
+      return SOLO_BOARD;
     },
   };
 }
@@ -102,6 +116,20 @@ export function createHttpAdapter({
           reveal: null,
           state: state.ledger,
         };
+      }
+    },
+    async leaderboard(gameId) {
+      try {
+        const board = await request(`/leaderboard?gameId=${encodeURIComponent(gameId)}`);
+        return {
+          available: Boolean(board?.available),
+          entries: Array.isArray(board?.entries) ? board.entries : [],
+          you: board?.you ?? null,
+          stats: board?.stats ?? null,
+        };
+      } catch {
+        // Offline or unauthenticated: fall back to the honest solo state.
+        return SOLO_BOARD;
       }
     },
   };

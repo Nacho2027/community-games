@@ -16,4 +16,5 @@ createShell({
     }
     return outcome;
   },
+  leaderboard: (gameId) => adapter.leaderboard(gameId),
 });

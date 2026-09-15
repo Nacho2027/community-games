@@ -35,11 +35,12 @@ function recentDays(count) {
   return days;
 }
 
-async function mount({ storage = memoryStorage(), submit } = {}) {
+async function mount({ storage = memoryStorage(), submit, leaderboard, doc } = {}) {
   const root = document.createElement("div");
   document.body.append(root);
   const adapter = createLocalAdapter({ storage });
   let state = await adapter.load();
+  const target = doc ?? { title: "" };
   createShell({
     root,
     getState: () => state,
@@ -50,8 +51,10 @@ async function mount({ storage = memoryStorage(), submit } = {}) {
         if (outcome.accepted) state = { ...state, ledger: outcome.state };
         return outcome;
       }),
+    leaderboard,
+    doc: target,
   });
-  return { root, getState: () => state };
+  return { root, getState: () => state, doc: target };
 }
 
 // Several macrotask turns: the commit handler awaits the adapter, then re-renders.
@@ -104,6 +107,8 @@ const numbersSolution = () => challenge.solve(numbersRound());
 describe("ui shell", () => {
   beforeEach(() => {
     document.body.replaceChildren();
+    // Routes live in the hash, so reset it or one test inherits the last one's game.
+    globalThis.location.hash = "";
   });
 
   it("renders a chip for every game", async () => {
@@ -362,7 +367,7 @@ describe("ui shell", () => {
   it("copies a spoiler-free result covering every game", async () => {
     const { root } = await mount();
     const button = [...root.querySelectorAll("button")].find((node) =>
-      node.textContent.includes("Copy today's result"),
+      node.textContent.includes("Copy all five"),
     );
     button.click();
     await flush();
@@ -385,7 +390,7 @@ describe("ui shell", () => {
     try {
       const { root } = await mount();
       const button = [...root.querySelectorAll("button")].find((node) =>
-        node.textContent.includes("Copy today's result"),
+        node.textContent.includes("Copy all five"),
       );
       button.click();
       await flush();
@@ -399,6 +404,89 @@ describe("ui shell", () => {
         configurable: true,
       });
     }
+  });
+
+  it("gives every game its own route and its own document title", async () => {
+    // Each game has to be its own thing: a name you can say and a link you can send.
+    const { root, doc } = await mount();
+    pick(root, challenge.meta.title);
+    expect(globalThis.location.hash).toBe("#/numbers");
+    expect(doc.title).toContain(challenge.meta.title);
+
+    pick(root, economy.meta.title);
+    expect(globalThis.location.hash).toBe("#/market");
+    expect(doc.title).toContain(economy.meta.title);
+  });
+
+  it("opens straight into the game named in the link", async () => {
+    globalThis.location.hash = "#/mystery";
+    const { root } = await mount();
+    expect(root.querySelector(".board h2").textContent).toBe("Name the culprit");
+  });
+
+  it("says so plainly when there is no shared board", async () => {
+    const { root } = await mount();
+    await flush();
+    expect(root.querySelector(".panel h3").textContent).toContain("Today's board");
+    expect(root.querySelector(".panel").textContent).toContain("no shared board");
+  });
+
+  it("renders today's board when a host provides one", async () => {
+    const board = {
+      available: true,
+      entries: [
+        { rank: 1, name: "Ada", points: 100, attemptsUsed: 1, solved: true, playerId: "ada" },
+        { rank: 2, name: "Player", points: 67, attemptsUsed: 2, solved: true, playerId: "local-player" },
+      ],
+      you: { rank: 2, playerId: "local-player" },
+      stats: { played: 40, solved: 31, firstTry: 9 },
+    };
+    const { root } = await mount({ leaderboard: async () => board });
+    await flush();
+
+    const rows = root.querySelectorAll(".rank-row");
+    expect(rows).toHaveLength(2);
+    expect(rows[0].textContent).toContain("Ada");
+    // Your own row is marked, so you can find yourself without reading the list.
+    expect(rows[1].classList.contains("mine")).toBe(true);
+    expect(rows[0].classList.contains("mine")).toBe(false);
+    expect(root.querySelector(".stat-line").textContent).toContain("40 played");
+    expect(root.querySelector(".stat-line").textContent).toContain("9 first try");
+  });
+
+  it("shows your rank when you are outside the top", async () => {
+    const { root } = await mount({
+      leaderboard: async () => ({
+        available: true,
+        entries: [
+          { rank: 1, name: "Ada", points: 100, attemptsUsed: 1, solved: true, playerId: "ada" },
+        ],
+        you: { rank: 47, playerId: "local-player" },
+        stats: { played: 90, solved: 40, firstTry: 3 },
+      }),
+    });
+    await flush();
+    expect(root.querySelector(".you-line").textContent).toContain("rank 47");
+  });
+
+  it("shares one game on its own with a link to that game", async () => {
+    const { root } = await mount();
+    pick(root, challenge.meta.title);
+    await playNumbers(root, numbersSolution());
+
+    const button = [...root.querySelectorAll("button")].find((node) =>
+      node.textContent.includes("Share this result"),
+    );
+    expect(button).toBeTruthy();
+    button.click();
+    await flush();
+
+    const text = root.querySelector(".sharebox").textContent;
+    expect(text).toContain(challenge.meta.title);
+    expect(text).toContain("#/numbers");
+    // The attempt count is the part other players can compare against.
+    expect(text).toContain("in 1");
+    expect(text).not.toContain(mystery.meta.title);
   });
 
   it("keeps playing when storage is blocked, as in private browsing", async () => {
