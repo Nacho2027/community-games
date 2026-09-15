@@ -16,7 +16,7 @@ Five daily games running on one codebase and one shared rules engine.
 
 ```bash
 npm install
-npm run verify     # 190 tests, then a production build into dist/
+npm run verify     # 214 tests, then a production build into dist/
 npm run dev        # play locally
 ```
 
@@ -61,6 +61,23 @@ anywhere in the stylesheet. It read as a settings page and printed developer out
 It is now direct manipulation: tap pool tiles and watch a running total climb, tap a clue to
 cross out the suspects it rules out, step quantities on a market row, commit, and watch the
 attempt fill in and the verdict land.
+
+### Each game stands alone
+
+Five games bundled into one page had nothing to name, nothing to link to, and nothing to
+compare against, which is most of why nobody could talk about them. So each game is its
+own game:
+
+- its own route (`#/numbers`, `#/market`, …) with its own document title, so a link opens
+  straight into it
+- its own result to share, naming the game, the score, and how many attempts it took
+- its own **daily board**, keyed by game and period, so it resets every day and no two games
+  share a ranking
+
+Ranking lives in one place, `rankScores` in `src/server/api.js`: more points first, then
+fewer attempts, then earlier submission. Hosts supply rows; the API ranks, sanitises, and
+limits them, and a score is recorded once on finish so a board cannot be padded by replaying
+a period. With no host board the UI says so plainly instead of showing an empty table.
 
 ### Retention and acquisition
 
