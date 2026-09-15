@@ -57,9 +57,11 @@ function challengeBoard(round, onChange) {
   };
 
   const sync = () => {
+    // Empty slots stay blank: the dashed border already reads as "waiting", and a literal
+    // underscore in five boxes looks like unrendered placeholder text.
     for (const slot of slotNodes)
-      slot.node.textContent = slot.index === null ? "_" : String(pool[slot.index]);
-    for (const slot of opNodes) slot.node.textContent = slot.value ?? "_";
+      slot.node.textContent = slot.index === null ? "" : String(pool[slot.index]);
+    for (const slot of opNodes) slot.node.textContent = slot.value ?? "";
 
     for (const tile of tiles) tile.disabled = picked.includes(tile.index);
 

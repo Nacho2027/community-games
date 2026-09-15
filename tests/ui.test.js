@@ -194,7 +194,7 @@ describe("ui shell", () => {
     expect(root.querySelector(".slot").textContent).toBe(String(pool[0]));
 
     root.querySelector(".slot").click();
-    expect(root.querySelector(".slot").textContent).toBe("_");
+    expect(root.querySelector(".slot").textContent).toBe("");
   });
 
   it("plays Community Market through the steppers and pays the ceiling for the best trade", async () => {
