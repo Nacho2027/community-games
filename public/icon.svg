@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Community Games">
+  <rect width="64" height="64" rx="14" fill="#1769e0"/>
+  <circle cx="22" cy="24" r="7" fill="#ffffff"/>
+  <circle cx="42" cy="24" r="7" fill="#ffffff" opacity="0.7"/>
+  <circle cx="32" cy="43" r="7" fill="#ffffff" opacity="0.85"/>
+</svg>
