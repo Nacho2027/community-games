@@ -9,14 +9,14 @@ Five daily games that run as one codebase and one shared rules engine.
 | Daily Numbers | daily | 10 | Use three pool numbers and two operators to hit the target |
 | Prediction League | daily | 100 | Forecast a fact about today's Numbers solution, with stated confidence |
 | Faction War | daily | 25 | Read the opening turn, then commit to the faction you think takes the war |
-| Daily Mystery | daily | 15 | Accuse the one suspect every clue fails to exclude |
+| Daily Mystery | daily | 15 | Cross-reference every alibi, then name the suspect the evidence cannot rule out |
 | Community Market | daily | 20 | Trade three goods within budget and holding capacity |
 
 ## Quick start
 
 ```bash
 npm install
-npm run verify     # 150 tests, then a production build into dist/
+npm run verify     # 154 tests, then a production build into dist/
 npm run dev        # play locally
 ```
 
@@ -59,6 +59,7 @@ three; each now has a regression test:
 | Community Market | `capacity` counted buy and sell legs together | best possible day scored **8 of 40** | capacity is a holding limit; ceiling is 20 and proven reachable |
 | Prediction League | outcome came from an independent random draw | **213 yes / 187 no** over 400 days — a coin flip | questions resolve against the day's Numbers solution; every template tested to a 20-80% base rate |
 | Faction War | every turn's crowd votes were published | naive "back the leader" won **200/200 = 100%** | only the opening turn is public; reading it now wins **69.5%**, blind picks 33.7% |
+| Daily Mystery | clues named three of four suspects outright | the answer was simply the **one name not printed** — 3 named/day, every day | clues describe conditions, suspects publish alibis and items; **0 clues name anyone** |
 
 ### Cross-game design
 
@@ -83,7 +84,7 @@ periods and asserts, for all five games on all 3660 days:
 
 - no answer-bearing field ever appears in a public round
 - Daily Numbers is always solvable
-- Daily Mystery always narrows to exactly one suspect, recomputed independently
+- Daily Mystery always narrows to exactly one suspect, and no clue ever names one
 - Community Market always leaves a profitable trade within its ceiling
 - points are always integers inside `[0, meta.maxPoints]`
 - rounds stay deterministic

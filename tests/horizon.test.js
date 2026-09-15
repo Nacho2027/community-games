@@ -77,11 +77,15 @@ describe("ten-year round integrity", () => {
       const round = mystery.roundFor(key);
       const culprit = mystery.solve(round);
       if (!culprit) return true;
-      // Recompute independently: a clue mentioning a suspect excludes that suspect.
+      // Recompute the deduction independently: a clue rules out one attribute value, and
+      // every suspect holds a distinct value, so it eliminates exactly one person.
       const excluded = new Set();
-      for (const clue of round.clues)
+      for (const clue of round.clues) {
+        const target = mystery.clueTarget(clue.text);
+        if (!target) continue;
         for (const suspect of round.suspects)
-          if (clue.text.includes(suspect.name)) excluded.add(suspect.id);
+          if (suspect[target.kind] === target.value) excluded.add(suspect.id);
+      }
       const remaining = round.suspects.filter((suspect) => !excluded.has(suspect.id));
       return remaining.length !== 1 || remaining[0].id !== culprit;
     });

@@ -1,118 +1,158 @@
 import { describe, expect, it } from "vitest";
 import {
+  ITEMS,
+  LOCATIONS,
+  clueTarget,
   excludedBy,
-  maxPoints,
   meta,
   roundFor,
   solve,
   submit,
 } from "../src/games/mystery.js";
 
-const PERIOD = "2026-03-04";
-
-function days(count, start = Date.UTC(2026, 0, 1)) {
+function keys(count) {
+  const start = Date.UTC(2026, 0, 1);
   return Array.from({ length: count }, (_, index) =>
     new Date(start + index * 86400000).toISOString().slice(0, 10),
   );
 }
 
-describe("mystery round", () => {
-  it("is deterministic for a period", () => {
-    expect(roundFor(PERIOD)).toEqual(roundFor(PERIOD));
+// Independent deduction built only from the published tables and the public round.
+function deduce(round) {
+  const excluded = new Set();
+  for (const clue of round.clues) {
+    const target = clueTarget(clue.text);
+    if (!target) continue; // atmosphere clue, rules nobody out
+    for (const suspect of round.suspects)
+      if (suspect[target.kind] === target.value) excluded.add(suspect.id);
+  }
+  return round.suspects.filter((suspect) => !excluded.has(suspect.id));
+}
+
+describe("mystery round content", () => {
+  it("is deterministic for a period key", () => {
+    expect(roundFor("2026-07-09")).toEqual(roundFor("2026-07-09"));
   });
 
-  it("presents four suspects and four clues", () => {
-    const round = roundFor(PERIOD);
-    expect(round.suspects).toHaveLength(4);
-    expect(round.clues).toHaveLength(4);
-    expect(new Set(round.suspects.map((suspect) => suspect.id)).size).toBe(4);
+  it("publishes four suspects with distinct alibis and items", () => {
+    for (const key of keys(60)) {
+      const round = roundFor(key);
+      expect(round.suspects).toHaveLength(4);
+      expect(new Set(round.suspects.map((suspect) => suspect.name)).size).toBe(4);
+      // Distinct attributes are what make a single clue eliminate exactly one person.
+      expect(new Set(round.suspects.map((suspect) => suspect.whereabouts)).size).toBe(4);
+      expect(new Set(round.suspects.map((suspect) => suspect.carried)).size).toBe(4);
+    }
   });
 
-  it("is uniquely solvable once the clues are applied", () => {
-    const round = roundFor(PERIOD);
-    const excluded = excludedBy(round);
-    const remaining = round.suspects.filter(
-      (suspect) => !excluded.has(suspect.id),
-    );
-    expect(excluded.size).toBe(3);
-    expect(remaining).toHaveLength(1);
-    expect(remaining[0].id).toBe(solve(round));
+  it("never names a suspect in the evidence", () => {
+    // Regression: three of four suspects used to be named outright, so the "deduction"
+    // was just spotting the one name that was missing. Every clue now describes a
+    // condition, and the player must connect it to an alibi.
+    for (const key of keys(400)) {
+      const round = roundFor(key);
+      for (const clue of round.clues)
+        for (const suspect of round.suspects)
+          expect(clue.text, `${key} named ${suspect.name}`).not.toContain(suspect.name);
+    }
   });
 
-  it("stays uniquely solvable across 120 periods", () => {
-    for (const period of days(120)) {
-      const round = roundFor(period);
+  it("never repeats the attribute it rules out", () => {
+    for (const key of keys(400)) {
+      const round = roundFor(key);
+      for (const clue of round.clues)
+        for (const suspect of round.suspects) {
+          expect(clue.text).not.toContain(suspect.whereabouts);
+          expect(clue.text).not.toContain(suspect.carried);
+        }
+    }
+  });
+
+  it("carries no answer field", () => {
+    for (const key of keys(40)) {
+      const round = roundFor(key);
+      expect(Object.keys(round).sort()).toEqual(["clues", "seed", "suspects"]);
+      expect(round).not.toHaveProperty("culprit");
+      expect(round).not.toHaveProperty("culpritId");
+      expect(round.clues).toHaveLength(4);
+    }
+  });
+
+  it("uses the whole clue vocabulary rather than one template", () => {
+    const used = new Set();
+    for (const key of keys(400)) for (const clue of roundFor(key).clues) used.add(clue.text);
+    const vocabulary = LOCATIONS.length + ITEMS.length;
+    expect(used.size).toBeGreaterThan(vocabulary * 0.5);
+  });
+});
+
+describe("mystery solvability", () => {
+  it("narrows to exactly one suspect on every day", () => {
+    for (const key of keys(600)) {
+      expect(deduce(roundFor(key)), key).toHaveLength(1);
+    }
+  });
+
+  it("agrees with solve()", () => {
+    for (const key of keys(600)) {
+      const round = roundFor(key);
+      expect(solve(round)).toBe(deduce(round)[0].id);
+    }
+  });
+
+  it("rules out exactly the innocent suspects", () => {
+    for (const key of keys(200)) {
+      const round = roundFor(key);
       const excluded = excludedBy(round);
-      const remaining = round.suspects.filter(
-        (suspect) => !excluded.has(suspect.id),
-      );
-      expect(remaining).toHaveLength(1);
-      expect(solve(round)).toBe(remaining[0].id);
-      expect(
-        round.suspects.some((suspect) => suspect.id === solve(round)),
-      ).toBe(true);
+      expect(excluded.size).toBe(3);
+      expect(excluded.has(solve(round))).toBe(false);
     }
   });
 
-  it("does not leak the culprit before submission", () => {
-    const round = roundFor(PERIOD);
-    expect(round.culpritId).toBeUndefined();
-    expect(round.excludes).toBeUndefined();
-    const dump = JSON.stringify(round).toLowerCase();
-    expect(dump).not.toContain("culprit");
-    expect(dump).not.toContain("answer");
-    expect(dump).not.toContain("excludes");
-    expect(dump).not.toContain("solution");
+  it("returns null for a malformed round", () => {
+    for (const bad of [undefined, null, {}, { seed: 5 }, { seed: "x" }]) {
+      expect(solve(bad)).toBeNull();
+    }
   });
+});
 
-  it("scores the correct accusation at maxPoints", () => {
-    for (const period of days(30)) {
-      const round = roundFor(period);
-      const outcome = submit(round, { suspectId: solve(round) });
-      expect(outcome.accepted).toBe(true);
-      expect(outcome.result.correct).toBe(true);
-      expect(outcome.points).toBe(maxPoints);
+describe("mystery scoring", () => {
+  it("awards maxPoints for the culprit and nothing otherwise", () => {
+    for (const key of keys(120)) {
+      const round = roundFor(key);
+      const culprit = solve(round);
+      const right = submit(round, { suspectId: culprit });
+      expect(right.accepted).toBe(true);
+      expect(right.points).toBe(meta.maxPoints);
+      expect(right.result.correct).toBe(true);
+
+      for (const suspect of round.suspects.filter((item) => item.id !== culprit)) {
+        const wrong = submit(round, { suspectId: suspect.id });
+        expect(wrong.accepted).toBe(true);
+        expect(wrong.points).toBe(0);
+        expect(wrong.result.correct).toBe(false);
+        // The reveal may name the culprit only after the accusation.
+        expect(wrong.result.culpritId).toBe(culprit);
+      }
     }
   });
 
-  it("accepts a wrong accusation with zero points and reveals the culprit", () => {
-    const round = roundFor(PERIOD);
-    const culpritId = solve(round);
-    const wrong = round.suspects.find((suspect) => suspect.id !== culpritId);
-    const outcome = submit(round, { suspectId: wrong.id });
-    expect(outcome.accepted).toBe(true);
-    expect(outcome.points).toBe(0);
-    expect(outcome.result.correct).toBe(false);
-    expect(outcome.result.culpritId).toBe(culpritId);
+  it("rejects malformed input without throwing", () => {
+    const round = roundFor("2026-03-04");
+    for (const action of [undefined, null, {}, { suspectId: "nope" }, { suspectId: 7 }, []]) {
+      const verdict = submit(round, action);
+      expect(verdict.accepted).toBe(false);
+      expect(verdict.points).toBe(0);
+    }
+    for (const bad of [undefined, null, {}, { seed: "x" }]) {
+      expect(submit(bad, { suspectId: "s0" }).accepted).toBe(false);
+    }
   });
 
-  it("never throws on malformed input", () => {
-    const round = roundFor(PERIOD);
-    for (const action of [
-      null,
-      undefined,
-      {},
-      [],
-      "s0",
-      3,
-      { suspectId: 9 },
-      { id: "s0" },
-    ]) {
-      expect(() => submit(round, action)).not.toThrow();
-      expect(submit(round, action).accepted).toBe(false);
-      expect(submit(round, action).points).toBe(0);
-    }
-    for (const broken of [null, undefined, {}, [], "x", { suspects: [] }]) {
-      expect(() => submit(broken, { suspectId: "s0" })).not.toThrow();
-      expect(submit(broken, { suspectId: "s0" }).accepted).toBe(false);
-    }
-    expect(solve(null)).toBe(null);
-    expect(solve({ seed: 5 })).toBe(null);
-  });
-
-  it("declares a bounded score", () => {
-    expect(meta.maxPoints).toBe(maxPoints);
-    expect(Number.isInteger(maxPoints)).toBe(true);
-    expect(maxPoints).toBeGreaterThan(0);
+  it("does not mutate the round it is given", () => {
+    const round = roundFor("2026-03-04");
+    const snapshot = JSON.stringify(round);
+    submit(round, { suspectId: round.suspects[0].id });
+    expect(JSON.stringify(round)).toBe(snapshot);
   });
 });
