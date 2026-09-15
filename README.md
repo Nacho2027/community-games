@@ -16,7 +16,7 @@ Five daily games that run as one codebase and one shared rules engine.
 
 ```bash
 npm install
-npm run verify     # 142 tests, then a production build into dist/
+npm run verify     # 150 tests, then a production build into dist/
 npm run dev        # play locally
 ```
 
@@ -74,3 +74,16 @@ Driving games from real puzzle state is what makes them worth returning to:
 
 See [PUBLISH.md](PUBLISH.md) for the web, Reddit Devvit, and Discord Activity steps plus
 the monetization checklists.
+
+### Worst-case hardening
+
+A daily game is only as good as its worst day: one degenerate round is a broken day for
+every player at once. `tests/horizon.test.js` sweeps ten years rather than a handful of
+periods and asserts, for all five games on all 3660 days:
+
+- no answer-bearing field ever appears in a public round
+- Daily Numbers is always solvable
+- Daily Mystery always narrows to exactly one suspect, recomputed independently
+- Community Market always leaves a profitable trade within its ceiling
+- points are always integers inside `[0, meta.maxPoints]`
+- rounds stay deterministic
