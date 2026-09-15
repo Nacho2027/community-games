@@ -16,7 +16,7 @@ Five daily games that run as one codebase and one shared rules engine.
 
 ```bash
 npm install
-npm run verify     # 154 tests, then a production build into dist/
+npm run verify     # 157 tests, then a production build into dist/
 npm run dev        # play locally
 ```
 
@@ -60,6 +60,7 @@ three; each now has a regression test:
 | Prediction League | outcome came from an independent random draw | **213 yes / 187 no** over 400 days — a coin flip | questions resolve against the day's Numbers solution; every template tested to a 20-80% base rate |
 | Faction War | every turn's crowd votes were published | naive "back the leader" won **200/200 = 100%** | only the opening turn is public; reading it now wins **69.5%**, blind picks 33.7% |
 | Daily Mystery | clues named three of four suspects outright | the answer was simply the **one name not printed** — 3 named/day, every day | clues describe conditions, suspects publish alibis and items; **0 clues name anyone** |
+| Prediction League | scoring was `correct ? confidence : 5` | expected value rose with confidence, so **always answering 100% was optimal** and the slider was decorative | proper scoring rule; optimal confidence now tracks each question's true rate (52%→55, 73%→75) |
 
 ### Cross-game design
 
@@ -86,5 +87,5 @@ periods and asserts, for all five games on all 3660 days:
 - Daily Numbers is always solvable
 - Daily Mystery always narrows to exactly one suspect, and no clue ever names one
 - Community Market always leaves a profitable trade within its ceiling
-- points are always integers inside `[0, meta.maxPoints]`
+- points are always integers inside `[0, meta.maxPoints]`, for every legal setting
 - rounds stay deterministic

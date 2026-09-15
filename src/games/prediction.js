@@ -60,9 +60,19 @@ const OPTIONS = [
   { id: "no", label: "No" },
 ];
 
-const CONSOLATION_POINTS = 5;
 const MIN_CONFIDENCE = 50;
 const MAX_CONFIDENCE = 100;
+
+// Proper scoring rule (Brier). Rewarding confidence unconditionally made the slider
+// decorative: expected value rose with confidence no matter what you believed, so
+// always answering 100% was optimal. Scoring against the squared error instead makes
+// honest reporting the best strategy.
+//   expected value of reporting q when you believe p is maximised at q = p
+export function calibrationPoints(confidence, correct) {
+  const stated = confidence / 100;
+  const truth = correct ? 1 : 0;
+  return clampPoints(100 * (1 - (stated - truth) ** 2));
+}
 
 // Derived from today's Numbers puzzle, so the answer is knowable by reasoning but is not
 // visible on the board. Never exposed by roundFor; only submit() reveals it.
@@ -117,7 +127,7 @@ export function submit(round, action) {
 
     const outcome = outcomeFor(periodKey, round.templateId);
     const correct = pick === outcome;
-    const points = clampPoints(correct ? confidence : CONSOLATION_POINTS);
+    const points = calibrationPoints(confidence, correct);
 
     return {
       accepted: true,
@@ -128,6 +138,9 @@ export function submit(round, action) {
         correct,
         confidence,
         templateId: round.templateId ?? null,
+        message: correct
+          ? `You said ${confidence}% and were right: ${points} points.`
+          : `You said ${confidence}% and were wrong: ${points} points.`,
       },
     };
   } catch {

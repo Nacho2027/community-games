@@ -31,9 +31,12 @@ function challenge() {
 function prediction(round) {
   const choices = (round.options ?? []).map((item) => ({ value: item.id, label: item.label }));
   const pick = select("pick", choices.length ? choices : [{ value: "yes" }, { value: "no" }]);
-  const confidence = range("confidence", 50, 100, 1, 70);
+  const confidence = range("confidence", 50, 100, 5, 70);
   return {
-    nodes: [field("Your pick", pick), field("Confidence (%)", confidence)],
+    nodes: [
+      field("Your pick", pick),
+      field("How sure are you?", confidence),
+    ],
     read: (form) => ({
       pick: form.elements.pick.value,
       confidence: Number(form.elements.confidence.value),

@@ -23,6 +23,10 @@ function prediction(round) {
   return [
     el("p", { text: round.question ?? "" }),
     el("ul", {}, (round.options ?? []).map((item) => el("li", { text: item.label }))),
+    el("p", {
+      class: "muted",
+      text: "Scored on accuracy: naming your true confidence beats always saying 100%, because an overconfident miss costs almost everything.",
+    }),
   ];
 }
 

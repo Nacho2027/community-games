@@ -64,29 +64,42 @@ describe("prediction round content", () => {
 });
 
 describe("prediction scoring", () => {
-  it("awards the stated confidence for a correct pick", () => {
+  it("scores a correct pick by how confident you were", () => {
     for (const key of keys(30)) {
       const round = roundFor(key);
       const outcome = outcomeOf(key);
       const confidence = 80;
       const verdict = submit(round, { pick: outcome, confidence });
       expect(verdict.accepted).toBe(true);
-      expect(verdict.points).toBe(confidence);
+      // Proper scoring rule: 100 * (1 - (stated - truth)^2).
+      expect(verdict.points).toBe(Math.round(100 * (1 - (0.8 - 1) ** 2)));
       expect(verdict.result.correct).toBe(true);
       expect(verdict.result.outcome).toBe(outcome);
       expect(verdict.reveal.outcome).toBe(outcome);
     }
   });
 
-  it("awards consolation points for an incorrect pick", () => {
+  it("punishes an overconfident wrong answer", () => {
     for (const key of keys(30)) {
       const round = roundFor(key);
       const outcome = outcomeOf(key);
       const wrong = outcome === "yes" ? "no" : "yes";
       const verdict = submit(round, { pick: wrong, confidence: 90 });
       expect(verdict.accepted).toBe(true);
-      expect(verdict.points).toBe(5);
+      // Regression: this used to pay a flat 5 no matter how wrong you were.
+      expect(verdict.points).toBe(Math.round(100 * (1 - (0.9 - 0) ** 2)));
+      expect(verdict.points).toBeLessThan(25);
       expect(verdict.result.correct).toBe(false);
+    }
+  });
+
+  it("scores a wrong confident answer below a wrong hedged one", () => {
+    for (const key of keys(30)) {
+      const round = roundFor(key);
+      const wrong = outcomeOf(key) === "yes" ? "no" : "yes";
+      const hedged = submit(round, { pick: wrong, confidence: 50 }).points;
+      const certain = submit(round, { pick: wrong, confidence: 100 }).points;
+      expect(certain).toBeLessThan(hedged);
     }
   });
 
@@ -135,7 +148,62 @@ describe("prediction validation", () => {
     for (const confidence of [50, 100]) {
       const verdict = submit(round, { pick: "yes", confidence });
       expect(verdict.accepted).toBe(true);
-      expect(verdict.points).toBeGreaterThan(0);
+      expect(Number.isInteger(verdict.points)).toBe(true);
+      expect(verdict.points).toBeGreaterThanOrEqual(0);
+      expect(verdict.points).toBeLessThanOrEqual(meta.maxPoints);
+    }
+  });
+
+  it("keeps points inside [0, maxPoints] for every setting", () => {
+    for (const key of keys(40)) {
+      const round = roundFor(key);
+      for (let confidence = 50; confidence <= 100; confidence += 5) {
+        for (const pick of ["yes", "no"]) {
+          const verdict = submit(round, { pick, confidence });
+          expect(Number.isInteger(verdict.points)).toBe(true);
+          expect(verdict.points).toBeGreaterThanOrEqual(0);
+          expect(verdict.points).toBeLessThanOrEqual(meta.maxPoints);
+        }
+      }
+    }
+  });
+
+  it("makes honest reporting optimal instead of always answering 100%", () => {
+    // Regression: scoring was `correct ? confidence : 5`, so expected value rose with
+    // confidence no matter what you believed and the slider was decorative. Under a
+    // proper scoring rule some interior confidence must beat certainty on every
+    // question, otherwise calibration still does not matter.
+    const sample = keys(600);
+    const buckets = new Map();
+    for (const key of sample) {
+      const id = roundFor(key).templateId;
+      const bucket = buckets.get(id) ?? { days: [], yes: 0 };
+      bucket.days.push(key);
+      if (outcomeOf(key) === "yes") bucket.yes += 1;
+      buckets.set(id, bucket);
+    }
+
+    expect(buckets.size).toBeGreaterThanOrEqual(4);
+    for (const [id, bucket] of buckets) {
+      const majority = bucket.yes / bucket.days.length >= 0.5 ? "yes" : "no";
+      const averageAt = (confidence) =>
+        bucket.days.reduce(
+          (sum, key) =>
+            sum + submit(roundFor(key), { pick: majority, confidence }).points,
+          0,
+        ) / bucket.days.length;
+
+      const certainty = averageAt(100);
+      let best = { confidence: 100, points: certainty };
+      for (let confidence = 50; confidence < 100; confidence += 5) {
+        const points = averageAt(confidence);
+        if (points > best.points) best = { confidence, points };
+      }
+      expect(
+        best.points,
+        `${id}: always answering 100% is still optimal`,
+      ).toBeGreaterThan(certainty);
+      expect(best.confidence).toBeLessThan(100);
     }
   });
 
