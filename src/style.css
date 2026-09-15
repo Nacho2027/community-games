@@ -110,7 +110,10 @@ body {
 
 .pick {
   flex: 0 0 auto;
-  padding: 9px 14px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 16px;
   border: 1px solid var(--line);
   border-radius: var(--r-pill);
   background: var(--surface);
@@ -288,12 +291,14 @@ body {
 
 .stepper { display: flex; align-items: center; gap: 6px; }
 .stepper button {
-  width: 34px; height: 34px;
+  /* 44px square: the previous 34px controls were below the minimum comfortable tap
+     target, which matters most on the market board where every trade is a series of taps. */
+  width: 44px; height: 44px;
   border: 1px solid var(--line-strong);
   border-radius: var(--r-sm);
   background: var(--surface-2);
   color: var(--ink);
-  font: inherit; font-size: 1.1rem; font-weight: 700;
+  font: inherit; font-size: 1.2rem; font-weight: 700;
   cursor: pointer;
   transition: border-color 140ms var(--ease), transform 120ms var(--ease);
 }
@@ -403,12 +408,15 @@ body {
 .foot { margin-top: 22px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 
 .ghost {
-  padding: 10px 14px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 16px;
   border: 1px solid var(--line);
   border-radius: var(--r-pill);
   background: transparent;
   color: var(--ink-dim);
-  font: inherit; font-size: 0.82rem; font-weight: 600;
+  font: inherit; font-size: 0.84rem; font-weight: 600;
   cursor: pointer;
   transition: color 140ms var(--ease), border-color 140ms var(--ease);
 }
