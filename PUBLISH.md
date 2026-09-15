@@ -14,7 +14,7 @@ test suite before publishing, so a red test can never reach the live site.
 
 ```bash
 npm install
-npm run verify        # 128 tests + production build into dist/
+npm run verify        # 190 tests + production build into dist/
 npm run preview       # serve the built app locally
 ```
 
@@ -33,7 +33,7 @@ The CLI is installed and wired into scripts. Verified state after `npm run login
 
 - `npm run whoami` -> `Logged in as u/MaintenanceLive7212` (login is done)
 - `devvit.json` parses cleanly against `@devvit/shared-types/schemas/config-file.v1.json`
-- `node build.mjs` produces `public/` (client) and `dist-server/index.js` (34 kB self-contained
+- `node build.mjs` produces `public/` (client) and `dist-server/index.js` (39 kB self-contained
   CommonJS server bundle, as the schema requires)
 
 **One human step remains.** `npm run upload` stops with:
@@ -112,7 +112,9 @@ is automated in this repo and verified by `npm run verify`.
 
 ## 5. Guardrails
 
-- One scored action per player per period, enforced by `src/engine/actions.js`
+- Capped attempts per player per period, enforced by `src/engine/progress.js`: a finished
+  period can never be replayed for points, a malformed move costs nothing, and a
+  well-formed wrong move always costs one attempt
 - No secrets (solutions, culprits, outcomes) in public round payloads
-- `submit()` never throws and always returns integer points within `meta.maxPoints`
+- `judge()` never throws; scoring stays integer and within `meta.maxPoints`
 - Local storage failures never break gameplay

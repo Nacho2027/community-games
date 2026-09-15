@@ -36,7 +36,8 @@ network failure, and tampered local state.
 
 `reddit/` is an upload-ready Devvit app:
 
-- `reddit/devvit.json` points at the built `../dist` client and `server/index.js`.
+- `reddit/devvit.json` points at the built client in `public/` and the bundled server at
+  `dist-server/index.js`.
 - `reddit/server/index.js` wires Reddit identity and Redis storage into `createApi`
   (localStorage is wiped on every app update, so progress must live in Redis).
 - `payments.enabled` stays `false` until the Reddit Earn Terms are accepted and products are
@@ -62,6 +63,7 @@ design, balance constants, and content shape would transfer.
 
 1. `npm run verify` passes (tests + production build).
 2. No public round payload contains an answer, culprit, or outcome.
-3. One scored action per player per period, enforced in `src/engine/actions.js`.
+3. Capped attempts per player per period, enforced in `src/engine/progress.js`: a finished
+   period cannot be replayed for points, and a wrong move costs an attempt.
 4. Secrets, identities, and scoring stay server-side.
 5. Each platform is playtested in its own development environment before release.
