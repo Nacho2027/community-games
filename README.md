@@ -7,16 +7,16 @@ Five daily games that run as one codebase and one shared rules engine.
 | Game | Cadence | Max points | Decision |
 | --- | --- | --- | --- |
 | Daily Numbers | daily | 10 | Use three pool numbers and two operators to hit the target |
-| Prediction League | daily | 100 | Call a yes/no outcome and state your confidence |
+| Prediction League | daily | 100 | Forecast a fact about today's Numbers solution, with stated confidence |
 | Faction War | daily | 25 | Back one of three factions against the crowd |
 | Daily Mystery | daily | 15 | Accuse the one suspect every clue fails to exclude |
-| Community Market | daily | 40 | Trade three goods within budget and capacity |
+| Community Market | daily | 20 | Trade three goods within budget and holding capacity |
 
 ## Quick start
 
 ```bash
 npm install
-npm run verify     # 128 tests, then a production build into dist/
+npm run verify     # 138 tests, then a production build into dist/
 npm run dev        # play locally
 ```
 
@@ -45,6 +45,19 @@ npm run dev        # play locally
 3. `submit()` never throws; malformed input returns `accepted: false`.
 4. Points are always integers within `[0, meta.maxPoints]`.
 5. Every round is provably solvable, and a test proves it.
+6. `meta.maxPoints` is actually reachable, and a test proves it. Two games shipped
+   broken scales before this was enforced: the market could score at most 8 of 40,
+   and prediction resolved by coin flip instead of from the puzzle.
+
+### Cross-game design
+
+Driving games from real puzzle state is what makes them worth returning to:
+
+- Prediction questions resolve against the same day's Numbers puzzle solution, so the
+  answer is knowable by reasoning but is not visible on the board. Every template is
+  tested to have a base rate between 20% and 80%, and to resolve both ways across days.
+- The market's capacity is a holding limit, not a trade-volume limit, so a perfect day
+  reaches the advertised ceiling.
 
 ## Publishing
 

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { meta, roundFor, submit } from "../src/games/prediction.js";
+import {
+  roundFor as challengeRound,
+  solve as challengeSolve,
+} from "../src/games/challenge.js";
 
 function keys(count) {
   const start = Date.UTC(2026, 0, 1);
@@ -140,6 +144,89 @@ describe("prediction validation", () => {
       const verdict = submit(bad, { pick: "yes", confidence: 70 });
       expect(verdict.accepted).toBe(false);
       expect(verdict.points).toBe(0);
+    }
+  });
+});
+
+describe("prediction resolution", () => {
+  // Independent oracle: recompute the expected answer straight from the Numbers puzzle
+  // instead of trusting the prediction module.
+  const ORACLES = {
+    multiply: (_round, solution) => solution.ops.includes("*"),
+    subtract: (_round, solution) => solution.ops.includes("-"),
+    largest: (round, solution) =>
+      Math.max(...round.pool) === Math.max(...solution.numbers),
+    aboveTarget: (round, solution) =>
+      solution.numbers.reduce((sum, value) => sum + value, 0) > round.target,
+    evenCount: (_round, solution) =>
+      solution.numbers.filter((value) => value % 2 === 0).length >= 2,
+    product: (_round, solution) =>
+      solution.numbers.reduce((sum, value) => sum + value, 0) % 2 === 0,
+  };
+
+  it("resolves from the Numbers puzzle instead of a coin flip", () => {
+    // Regression: the outcome used to come from an independent random draw, so the
+    // game had no skill component and nothing a player could reason about.
+    for (const key of keys(120)) {
+      const round = roundFor(key);
+      const puzzle = challengeRound(key);
+      const solution = challengeSolve(puzzle);
+      const oracle = ORACLES[round.templateId];
+      expect(oracle, `unknown template ${round.templateId}`).toBeTruthy();
+      const expected = oracle(puzzle, solution) ? "yes" : "no";
+      expect(outcomeOf(key), `${key} ${round.templateId}`).toBe(expected);
+    }
+  });
+
+  it("gives every template a non-degenerate base rate", () => {
+    const buckets = new Map();
+    for (const key of keys(1200)) {
+      const round = roundFor(key);
+      const bucket = buckets.get(round.templateId) ?? { yes: 0, total: 0 };
+      bucket.total += 1;
+      if (outcomeOf(key) === "yes") bucket.yes += 1;
+      buckets.set(round.templateId, bucket);
+    }
+
+    expect(buckets.size).toBeGreaterThanOrEqual(4);
+    for (const [id, bucket] of buckets) {
+      const rate = bucket.yes / bucket.total;
+      // A question that is almost always yes or almost always no is not a prediction.
+      expect(rate, `${id} resolved yes ${(rate * 100).toFixed(1)}%`).toBeGreaterThan(0.2);
+      expect(rate, `${id} resolved yes ${(rate * 100).toFixed(1)}%`).toBeLessThan(0.8);
+    }
+  });
+
+  it("asks about the puzzle rather than stating an answer", () => {
+    for (const key of keys(40)) {
+      const round = roundFor(key);
+      expect(round.question.endsWith("?")).toBe(true);
+      // The question may mention the solution, but the payload carries no answer field.
+      expect(Object.keys(round).sort()).toEqual([
+        "metric",
+        "options",
+        "periodKey",
+        "question",
+        "templateId",
+      ]);
+      const serialized = JSON.stringify(round);
+      expect(serialized).not.toContain("outcome");
+      expect(serialized).not.toContain("correct");
+      expect(serialized).not.toContain("ops");
+    }
+  });
+
+  it("does not encode the answer in the template", () => {
+    // If the answer followed from the template id alone, the round would leak it.
+    const answers = new Map();
+    for (const key of keys(200)) {
+      const round = roundFor(key);
+      const seen = answers.get(round.templateId) ?? new Set();
+      seen.add(outcomeOf(key));
+      answers.set(round.templateId, seen);
+    }
+    for (const [id, seen] of answers) {
+      expect(seen.size, `${id} always resolves ${[...seen][0]}`).toBe(2);
     }
   });
 });

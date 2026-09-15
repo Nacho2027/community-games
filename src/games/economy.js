@@ -5,7 +5,7 @@ export const meta = {
   title: "Community Market",
   description: "Trade three goods through one volatile market day.",
   cadence: "daily",
-  maxPoints: 40,
+  maxPoints: 20,
 };
 
 const GOODS = [
@@ -16,8 +16,11 @@ const GOODS = [
 
 const TRENDS = ["busy", "steady", "quiet"];
 const STARTING_COINS = 30;
+// Capacity is how many units you can HOLD at once, not how many you may trade.
+// Counting both legs made the best possible day worth only 8 points out of 40.
 const CAPACITY = 5;
-const MAX_POINTS = 40;
+// Best case is CAPACITY units at the largest spread, which is 4 coins a unit.
+const MAX_POINTS = CAPACITY * 4;
 
 function isPlainObject(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -86,8 +89,8 @@ export function submit(round, action) {
     ? round.startingCoins
     : STARTING_COINS;
 
-  if (totalQty(buys.legs) + totalQty(sells.legs) > capacity)
-    return reject(`total traded quantity exceeds capacity of ${capacity}`);
+  if (totalQty(buys.legs) > capacity)
+    return reject(`cannot hold ${totalQty(buys.legs)} units, capacity is ${capacity}`);
 
   const totalBuyCost = buys.legs.reduce(
     (sum, leg) => sum + leg.qty * leg.price,
@@ -134,4 +137,23 @@ export function submit(round, action) {
           : `You finished with ${finalCoins} coins and no profit.`,
     },
   };
+}
+
+// Optimal play, used by tests to prove the ceiling is actually reachable.
+// Margins are linear and capacity is shared, so concentrating on the best
+// affordable spread is optimal.
+export function bestAction(round) {
+  if (!isPlainObject(round) || !Array.isArray(round.goods)) return { buy: [], sell: [] };
+  const capacity = Number.isInteger(round.capacity) ? round.capacity : CAPACITY;
+  const coins = Number.isInteger(round.startingCoins) ? round.startingCoins : STARTING_COINS;
+  let best = { buy: [], sell: [], profit: 0 };
+  for (const good of round.goods) {
+    const margin = good.sell - good.buy;
+    if (margin <= 0) continue;
+    const qty = Math.min(capacity, Math.floor(coins / good.buy));
+    const profit = qty * margin;
+    if (profit > best.profit)
+      best = { buy: [{ goodId: good.id, qty }], sell: [{ goodId: good.id, qty }], profit };
+  }
+  return { buy: best.buy, sell: best.sell };
 }

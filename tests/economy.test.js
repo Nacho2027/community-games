@@ -115,3 +115,67 @@ describe("economy validation", () => {
     expect(idling.result.finalCoins).toBe(round.startingCoins);
   });
 });
+
+describe("economy scoring scale", () => {
+  function keys(count) {
+    const start = Date.UTC(2026, 0, 1);
+    return Array.from({ length: count }, (_, index) =>
+      new Date(start + index * 86400000).toISOString().slice(0, 10),
+    );
+  }
+
+  it("a perfect day is worth exactly maxPoints", () => {
+    // Regression: capacity used to count buy and sell legs together, so the best
+    // possible day scored 8 against an advertised ceiling of 40.
+    const perfect = keys(120).filter((key) => {
+      const round = roundFor(key);
+      return submit(round, bestAction(round).action).points === meta.maxPoints;
+    });
+    expect(perfect.length).toBeGreaterThan(0);
+  });
+
+  it("never awards more than the advertised ceiling", () => {
+    for (const key of keys(120)) {
+      const round = roundFor(key);
+      const verdict = submit(round, bestAction(round).action);
+      expect(verdict.points).toBeLessThanOrEqual(meta.maxPoints);
+    }
+  });
+
+  it("always leaves a profitable trade available", () => {
+    for (const key of keys(60)) {
+      const round = roundFor(key);
+      expect(submit(round, bestAction(round).action).points).toBeGreaterThan(0);
+    }
+  });
+
+  it("counts capacity as units held, so round-tripping a position is legal", () => {
+    const round = roundFor(PERIOD);
+    const action = bestAction(round).action;
+    const buyQty = action.buy.reduce((sum, leg) => sum + leg.qty, 0);
+    const sellQty = action.sell.reduce((sum, leg) => sum + leg.qty, 0);
+
+    // Buying and selling the same position trades twice the capacity in volume.
+    expect(buyQty + sellQty).toBeGreaterThan(round.capacity);
+    expect(submit(round, action).accepted).toBe(true);
+  });
+
+  it("still refuses to hold more units than capacity", () => {
+    const round = roundFor(PERIOD);
+    const cheapest = [...round.goods].sort((a, b) => a.buy - b.buy)[0];
+    const verdict = submit(round, {
+      buy: [{ goodId: cheapest.id, qty: round.capacity + 1 }],
+      sell: [],
+    });
+    expect(verdict.accepted).toBe(false);
+  });
+
+  it("still refuses to sell what was not bought", () => {
+    const round = roundFor(PERIOD);
+    const verdict = submit(round, {
+      buy: [],
+      sell: [{ goodId: round.goods[0].id, qty: 1 }],
+    });
+    expect(verdict.accepted).toBe(false);
+  });
+});

@@ -1,44 +1,57 @@
 import { rngFor } from "../engine/rng.js";
+import { roundFor as challengeRound, solve as challengeSolve } from "./challenge.js";
 
 export const meta = {
   id: "prediction",
   title: "Prediction League",
   description:
-    "Call today's community outcome and record how confident you were.",
+    "Forecast today's Numbers puzzle before you solve it, and record your confidence.",
   cadence: "daily",
   maxPoints: 100,
 };
 
+// Every question is a real, verifiable fact about today's Numbers puzzle that cannot be
+// answered by looking at the board: you have to work out the solution. Resolving these by
+// coin flip made the game pure luck, with no skill and nothing to learn.
 const TEMPLATES = [
   {
-    id: "players",
-    question: "Will today's player count beat yesterday's?",
-    metric: "daily players",
+    id: "multiply",
+    question: "Will today's Numbers solution use multiplication?",
+    metric: "today's solution",
+    test: (_round, solution) => solution.ops.includes("*"),
   },
   {
-    id: "threads",
-    question: "Will more than 50 new discussion threads appear today?",
-    metric: "new threads",
+    id: "subtract",
+    question: "Will today's Numbers solution use subtraction?",
+    metric: "today's solution",
+    test: (_round, solution) => solution.ops.includes("-"),
   },
   {
-    id: "retention",
-    question: "Will more than half of yesterday's players return today?",
-    metric: "returning players",
+    id: "largest",
+    question: "Will today's Numbers solution use the largest number in the pool?",
+    metric: "today's solution",
+    test: (round, solution) => Math.max(...round.pool) === Math.max(...solution.numbers),
   },
   {
-    id: "streaks",
-    question: "Will at least 10 players extend a streak today?",
-    metric: "active streaks",
+    id: "aboveTarget",
+    question: "Will the three numbers in today's solution sum to more than the target?",
+    metric: "today's solution",
+    test: (round, solution) =>
+      solution.numbers.reduce((sum, value) => sum + value, 0) > round.target,
   },
   {
-    id: "comments",
-    question: "Will a game post reach 100 comments today?",
-    metric: "post comments",
+    id: "evenCount",
+    question: "Will today's solution use more even numbers than odd ones?",
+    metric: "today's solution",
+    test: (_round, solution) =>
+      solution.numbers.filter((value) => value % 2 === 0).length >= 2,
   },
   {
-    id: "solveRate",
-    question: "Will more than a quarter of players solve today's puzzle?",
-    metric: "solve rate",
+    id: "product",
+    question: "Will the plain sum of today's three solution numbers be an even number?",
+    metric: "today's solution",
+    test: (_round, solution) =>
+      solution.numbers.reduce((sum, value) => sum + value, 0) % 2 === 0,
   },
 ];
 
@@ -51,9 +64,19 @@ const CONSOLATION_POINTS = 5;
 const MIN_CONFIDENCE = 50;
 const MAX_CONFIDENCE = 100;
 
-// Roughly even split, deterministic per period, and never exposed by roundFor.
-function outcomeFor(periodKey) {
-  return rngFor(`prediction-outcome:${periodKey}`)() >= 0.5 ? "yes" : "no";
+// Derived from today's Numbers puzzle, so the answer is knowable by reasoning but is not
+// visible on the board. Never exposed by roundFor; only submit() reveals it.
+function outcomeFor(periodKey, templateId) {
+  const template =
+    TEMPLATES.find((item) => item.id === templateId) ?? TEMPLATES[0];
+  const round = challengeRound(periodKey);
+  const solution = challengeSolve(round);
+  if (!solution) return "no";
+  try {
+    return template.test(round, solution) ? "yes" : "no";
+  } catch {
+    return "no";
+  }
 }
 
 export function roundFor(periodKey) {
@@ -92,7 +115,7 @@ export function submit(round, action) {
     if (confidence < MIN_CONFIDENCE || confidence > MAX_CONFIDENCE)
       return reject("confidence");
 
-    const outcome = outcomeFor(periodKey);
+    const outcome = outcomeFor(periodKey, round.templateId);
     const correct = pick === outcome;
     const points = clampPoints(correct ? confidence : CONSOLATION_POINTS);
 
