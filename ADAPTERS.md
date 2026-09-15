@@ -4,7 +4,18 @@ One codebase, one rules engine, three surfaces. Game rules never live in a platf
 
 ## The seam
 
-`src/adapters/index.js` is the only place a platform difference is allowed:
+`src/server/api.js` holds the authoritative HTTP logic once, platform-neutral:
+
+```js
+createApi({ identify, loadLedger, saveLedger, now })
+  -> { state(), round({ gameId }), play({ gameId, action }) }
+```
+
+Each handler returns `{ status, body }`. Hosts only supply identity and storage.
+Covered by `tests/server.test.js`, including 401s, unknown games, duplicate attempts,
+malformed actions, per-player isolation, and spoiler safety.
+
+`src/adapters/index.js` is the client seam:
 
 ```js
 load()                  -> Promise<state>
@@ -26,17 +37,21 @@ network failure, and tampered local state.
 `reddit/` is an upload-ready Devvit app:
 
 - `reddit/devvit.json` points at the built `../dist` client and `server/index.js`.
-- `reddit/server/index.js` is authoritative: identity comes from `reddit.getCurrentUser()`,
-  progress lives in Redis (localStorage is wiped on every app update), and
-  `GET /api/state`, `GET /api/round`, `POST /api/play` all delegate scoring to `play()`.
+- `reddit/server/index.js` wires Reddit identity and Redis storage into `createApi`
+  (localStorage is wiped on every app update, so progress must live in Redis).
 - `payments.enabled` stays `false` until the Reddit Earn Terms are accepted and products are
   approved. Paid items must be cosmetic or convenience only.
 
 ## Discord Activity
 
-Reuse the same `dist` bundle inside the Activity iframe and switch `__GAMES_API__` to the
-Activity host. Key multiplayer rooms by `instanceId`, validate the launch session with the
-Activity Instance API before trusting it, and check entitlements server-side.
+`discord/server/index.js` wires the Activity session and storage into the same `createApi`.
+
+- Reuse the same `dist` bundle inside the Activity iframe and set `__GAMES_API__` to the
+  Activity host.
+- Resolve the participant from the verified Activity session, never from client input.
+- Key multiplayer rooms by `instanceId`.
+- Check entitlements server-side before granting any paid reward.
+- Swap the in-memory ledger map for durable storage before production.
 
 ## Roblox
 
