@@ -56,7 +56,9 @@ describe("faction round content", () => {
       const round = roundFor(key);
       expect(round.factions).toHaveLength(3);
       expect(new Set(round.factions.map((faction) => faction.id)).size).toBe(3);
-      expect(new Set(round.factions.map((faction) => faction.name)).size).toBe(3);
+      expect(new Set(round.factions.map((faction) => faction.name)).size).toBe(
+        3,
+      );
     }
   });
 
@@ -153,7 +155,13 @@ describe("faction scoring", () => {
       expect(verdict.accepted).toBe(false);
       expect(verdict.points).toBe(0);
     }
-    for (const bad of [undefined, null, {}, { factions: [] }, { factions: "x" }]) {
+    for (const bad of [
+      undefined,
+      null,
+      {},
+      { factions: [] },
+      { factions: "x" },
+    ]) {
       expect(submit(bad, { factionId: "f0" }).accepted).toBe(false);
     }
   });

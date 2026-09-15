@@ -1,41 +1,39 @@
 {
-  "$schema": "https://developers.reddit.com/schema/devvit.json",
+  "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
   "name": "community-games",
   "server": {
-    "dir": "server",
+    "dir": "dist-server",
     "entry": "index.js"
   },
-  "client": {
-    "dir": "../dist",
-    "entry": "index.html"
+  "post": {
+    "dir": "public",
+    "entrypoints": {
+      "default": {
+        "entry": "index.html"
+      }
+    }
   },
   "menu": {
     "items": [
       {
-        "label": "Play Community Games",
-        "description": "Post today's community games",
+        "label": "Post today's Community Games",
+        "description": "Share today's five games as an interactive post",
         "location": "subreddit",
         "forUserType": "moderator",
         "endpoint": "/internal/menu/post-games"
       }
     ]
   },
-  "forms": {
-    "postGames": "/internal/form/post-games"
-  },
   "scripts": {
-    "build": "npm --prefix .. run build"
+    "build": "node build.mjs",
+    "dev": "node build.mjs"
   },
   "permissions": {
     "reddit": {
       "enable": true,
-      "scope": "moderator"
+      "scope": "user"
     },
     "redis": true,
     "realtime": true
-  },
-  "payments": {
-    "enabled": false,
-    "note": "Enable only after Reddit Earn Terms acceptance and product approval."
   }
 }

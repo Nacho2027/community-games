@@ -2,7 +2,10 @@ import { createLedger } from "./engine/actions.js";
 
 const STORAGE_KEY = "community-games-lab:v2";
 
-const DEFAULT_STATE = { player: { id: "local-player", name: "Player" }, ledger: createLedger() };
+const DEFAULT_STATE = {
+  player: { id: "local-player", name: "Player" },
+  ledger: createLedger(),
+};
 
 function isPlainObject(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -16,7 +19,8 @@ function finiteInt(value, fallback = 0) {
 function sanitizeEntry(entry) {
   if (!isPlainObject(entry)) return null;
   const gameId = typeof entry.gameId === "string" ? entry.gameId : null;
-  const periodKey = typeof entry.periodKey === "string" ? entry.periodKey : null;
+  const periodKey =
+    typeof entry.periodKey === "string" ? entry.periodKey : null;
   if (!gameId || !periodKey) return null;
   return {
     gameId,
@@ -47,8 +51,14 @@ export function createState(initial = {}) {
   const player = isPlainObject(source.player) ? source.player : {};
   return {
     player: {
-      id: typeof player.id === "string" && player.id ? player.id : DEFAULT_STATE.player.id,
-      name: typeof player.name === "string" && player.name ? player.name : DEFAULT_STATE.player.name,
+      id:
+        typeof player.id === "string" && player.id
+          ? player.id
+          : DEFAULT_STATE.player.id,
+      name:
+        typeof player.name === "string" && player.name
+          ? player.name
+          : DEFAULT_STATE.player.name,
     },
     ledger: sanitizeLedger(source.ledger),
   };

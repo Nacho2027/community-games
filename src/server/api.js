@@ -5,10 +5,18 @@ import { createLedger } from "../engine/actions.js";
 // identity and storage into these three handlers; the rules and scoring come from play().
 //
 // Every handler returns { status, body } so hosts can map it to their own response object.
-export function createApi({ identify, loadLedger, saveLedger, now = () => new Date() }) {
-  if (typeof identify !== "function") throw new Error("createApi requires identify()");
-  if (typeof loadLedger !== "function") throw new Error("createApi requires loadLedger()");
-  if (typeof saveLedger !== "function") throw new Error("createApi requires saveLedger()");
+export function createApi({
+  identify,
+  loadLedger,
+  saveLedger,
+  now = () => new Date(),
+}) {
+  if (typeof identify !== "function")
+    throw new Error("createApi requires identify()");
+  if (typeof loadLedger !== "function")
+    throw new Error("createApi requires loadLedger()");
+  if (typeof saveLedger !== "function")
+    throw new Error("createApi requires saveLedger()");
 
   async function withPlayer(handler) {
     let player;
@@ -17,7 +25,8 @@ export function createApi({ identify, loadLedger, saveLedger, now = () => new Da
     } catch {
       return { status: 401, body: { error: "unauthenticated" } };
     }
-    if (!player?.name) return { status: 401, body: { error: "unauthenticated" } };
+    if (!player?.name)
+      return { status: 401, body: { error: "unauthenticated" } };
     const ledger = createLedger(await loadLedger(player));
     return handler(player, ledger);
   }
@@ -38,7 +47,10 @@ export function createApi({ identify, loadLedger, saveLedger, now = () => new Da
         if (!game) {
           return {
             status: 404,
-            body: { error: "unknown-game", games: registry.map((item) => item.meta.id) },
+            body: {
+              error: "unknown-game",
+              games: registry.map((item) => item.meta.id),
+            },
           };
         }
         const periodKey = periodFor(game, now());

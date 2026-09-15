@@ -38,7 +38,12 @@ function reject(reason) {
   return {
     accepted: false,
     points: 0,
-    result: { winnerId: null, standings: [], playerFactionId: null, won: false },
+    result: {
+      winnerId: null,
+      standings: [],
+      playerFactionId: null,
+      won: false,
+    },
     reveal: { message: reason },
     reason,
   };
@@ -60,13 +65,17 @@ function build(periodKey) {
     const row = {};
     for (const faction of factions)
       row[faction.id] =
-        (strength.get(faction.id) ?? 0) * STRENGTH_WEIGHT + intBetween(rng, 0, NOISE);
+        (strength.get(faction.id) ?? 0) * STRENGTH_WEIGHT +
+        intBetween(rng, 0, NOISE);
     votes.push(row);
   }
 
   const totals = {};
   for (const faction of factions)
-    totals[faction.id] = votes.reduce((sum, row) => sum + (row[faction.id] ?? 0), 0);
+    totals[faction.id] = votes.reduce(
+      (sum, row) => sum + (row[faction.id] ?? 0),
+      0,
+    );
 
   return { factions, votes, totals };
 }
@@ -86,7 +95,11 @@ export function roundFor(periodKey) {
 }
 
 export function submit(round, action) {
-  if (!isPlainObject(round) || !Array.isArray(round.factions) || !round.factions.length)
+  if (
+    !isPlainObject(round) ||
+    !Array.isArray(round.factions) ||
+    !round.factions.length
+  )
     return reject("Round data is unavailable.");
 
   const factionId = isPlainObject(action) ? action.factionId : undefined;
@@ -103,7 +116,8 @@ export function submit(round, action) {
   const standings = factions.map((faction) => ({
     id: faction.id,
     name: faction.name,
-    total: (totals[faction.id] ?? 0) + (faction.id === backed.id ? BONUS_TOTAL : 0),
+    total:
+      (totals[faction.id] ?? 0) + (faction.id === backed.id ? BONUS_TOTAL : 0),
   }));
 
   // Ties resolve deterministically by faction order.

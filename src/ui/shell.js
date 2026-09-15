@@ -63,32 +63,47 @@ export function createShell({ root, getState, submit }) {
       section.append(...describeRound(active, round));
       const built = buildActionForm(active, round);
       const feedback = el("p", { class: "feedback" });
-      const form = el("form", {
-        onsubmit: async (event) => {
-          event.preventDefault();
-          const action = built.read(event.target);
-          const outcome = await submit(active, action);
-          if (outcome.accepted) {
-            lastResult = { result: outcome.result, reveal: outcome.reveal };
-            render();
-          } else {
-            feedback.className = "feedback error";
-            feedback.textContent = message(outcome.reason);
-          }
+      const form = el(
+        "form",
+        {
+          onsubmit: async (event) => {
+            event.preventDefault();
+            const action = built.read(event.target);
+            const outcome = await submit(active, action);
+            if (outcome.accepted) {
+              lastResult = { result: outcome.result, reveal: outcome.reveal };
+              render();
+            } else {
+              feedback.className = "feedback error";
+              feedback.textContent = message(outcome.reason);
+            }
+          },
         },
-      }, [...built.nodes, el("button", { type: "submit", text: "Submit" })]);
+        [...built.nodes, el("button", { type: "submit", text: "Submit" })],
+      );
       section.append(form, feedback);
     } else if (lastResult) {
       section.append(el("p", { class: "positive", text: "Recorded." }));
       if (lastResult.reveal?.summary)
         section.append(el("p", { text: lastResult.reveal.summary }));
       if (lastResult.reveal)
-        section.append(el("pre", { class: "result", text: JSON.stringify(lastResult.reveal, null, 2) }));
+        section.append(
+          el("pre", {
+            class: "result",
+            text: JSON.stringify(lastResult.reveal, null, 2),
+          }),
+        );
     } else {
       const entry = state.ledger.actions[`${active}:${periodKey}`];
       section.append(
-        el("p", { class: "positive", text: `Already played today for ${entry.points} points.` }),
-        el("p", { class: "muted", text: "Come back tomorrow for a new round." }),
+        el("p", {
+          class: "positive",
+          text: `Already played today for ${entry.points} points.`,
+        }),
+        el("p", {
+          class: "muted",
+          text: "Come back tomorrow for a new round.",
+        }),
       );
     }
 
@@ -99,7 +114,8 @@ export function createShell({ root, getState, submit }) {
   function history(state) {
     const list = el("ul", { class: "history" });
     const recent = state.ledger.history.slice(0, 8);
-    if (!recent.length) list.append(el("li", { class: "muted", text: "No plays yet." }));
+    if (!recent.length)
+      list.append(el("li", { class: "muted", text: "No plays yet." }));
     for (const entry of recent) {
       const meta = registry.find((game) => game.meta.id === entry.gameId);
       list.append(
@@ -110,12 +126,22 @@ export function createShell({ root, getState, submit }) {
     }
     const scoreboard = el("div", { class: "scoreboard" }, [
       el("h3", { text: "Per-game totals" }),
-      el("ul", {}, TABS.map((tab) =>
-        el("li", { text: `${tab.title}: ${pointsFor(state.ledger, tab.id)}` }),
-      )),
+      el(
+        "ul",
+        {},
+        TABS.map((tab) =>
+          el("li", {
+            text: `${tab.title}: ${pointsFor(state.ledger, tab.id)}`,
+          }),
+        ),
+      ),
     ]);
     return el("div", { class: "summary" }, [
-      el("div", {}, [el("h3", { text: "Recent plays" }), list, shareButton(state)]),
+      el("div", {}, [
+        el("h3", { text: "Recent plays" }),
+        list,
+        shareButton(state),
+      ]),
       scoreboard,
     ]);
   }

@@ -5,7 +5,9 @@
   background: #f3f6fa;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 body {
   max-width: 860px;
@@ -13,16 +15,41 @@ body {
   padding: 28px 18px 64px;
 }
 
-h1 { margin: 0 0 4px; font-size: 1.6rem; }
-h2 { margin: 0 0 6px; font-size: 1.2rem; }
-h3 { margin: 16px 0 6px; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.04em; color: #617080; }
+h1 {
+  margin: 0 0 4px;
+  font-size: 1.6rem;
+}
+h2 {
+  margin: 0 0 6px;
+  font-size: 1.2rem;
+}
+h3 {
+  margin: 16px 0 6px;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #617080;
+}
 
-p { line-height: 1.5; margin: 6px 0; }
+p {
+  line-height: 1.5;
+  margin: 6px 0;
+}
 
-.muted { color: #617080; }
-.positive { color: #18794e; font-weight: 600; }
-.error { color: #a51d2d; }
-.score { font-weight: 700; font-size: 1.05rem; }
+.muted {
+  color: #617080;
+}
+.positive {
+  color: #18794e;
+  font-weight: 600;
+}
+.error {
+  color: #a51d2d;
+}
+.score {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
 
 nav {
   display: flex;
@@ -42,9 +69,18 @@ button {
   cursor: pointer;
 }
 
-button:hover { background: #1257bb; }
-button.selected { background: #0d3e87; }
-button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #7fb0f5; outline-offset: 1px; }
+button:hover {
+  background: #1257bb;
+}
+button.selected {
+  background: #0d3e87;
+}
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid #7fb0f5;
+  outline-offset: 1px;
+}
 
 .panel {
   margin-top: 14px;
@@ -54,11 +90,24 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   border-radius: 12px;
 }
 
-form { display: flex; flex-direction: column; gap: 12px; margin: 16px 0 0; max-width: 420px; }
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0 0;
+  max-width: 420px;
+}
 
-.field { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; color: #52606d; }
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9rem;
+  color: #52606d;
+}
 
-input, select {
+input,
+select {
   font: inherit;
   padding: 9px 10px;
   border: 1px solid #b8c4d1;
@@ -67,16 +116,48 @@ input, select {
   color: inherit;
 }
 
-.range { display: flex; align-items: center; gap: 10px; }
-.range input[type="range"] { flex: 1; padding: 0; border: 0; }
-.range output { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 2.5em; }
+.range {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.range input[type="range"] {
+  flex: 1;
+  padding: 0;
+  border: 0;
+}
+.range output {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  min-width: 2.5em;
+}
 
-table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 0.92rem; }
-th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #e3e8ee; }
-th { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; color: #617080; }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 10px 0;
+  font-size: 0.92rem;
+}
+th,
+td {
+  text-align: left;
+  padding: 8px 6px;
+  border-bottom: 1px solid #e3e8ee;
+}
+th {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #617080;
+}
 
-ul { margin: 8px 0; padding-left: 20px; }
-li { line-height: 1.6; }
+ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+li {
+  line-height: 1.6;
+}
 
 .result {
   background: #f0f4f8;
@@ -86,7 +167,10 @@ li { line-height: 1.6; }
   overflow-x: auto;
 }
 
-.feedback { min-height: 1.4em; font-weight: 600; }
+.feedback {
+  min-height: 1.4em;
+  font-weight: 600;
+}
 
 .summary {
   display: grid;
@@ -97,13 +181,34 @@ li { line-height: 1.6; }
   border-top: 1px solid #e3e8ee;
 }
 
-.history { list-style: none; padding: 0; font-size: 0.9rem; }
-.history li { padding: 5px 0; border-bottom: 1px dashed #e3e8ee; }
+.history {
+  list-style: none;
+  padding: 0;
+  font-size: 0.9rem;
+}
+.history li {
+  padding: 5px 0;
+  border-bottom: 1px dashed #e3e8ee;
+}
 
-.share { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
-.share .result { width: 100%; white-space: pre-wrap; margin: 0; }
+.share {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+.share .result {
+  width: 100%;
+  white-space: pre-wrap;
+  margin: 0;
+}
 
 @media (max-width: 520px) {
-  body { padding: 18px 12px 48px; }
-  .panel { padding: 18px 14px; }
+  body {
+    padding: 18px 12px 48px;
+  }
+  .panel {
+    padding: 18px 14px;
+  }
 }

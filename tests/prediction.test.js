@@ -260,8 +260,14 @@ describe("prediction resolution", () => {
     for (const [id, bucket] of buckets) {
       const rate = bucket.yes / bucket.total;
       // A question that is almost always yes or almost always no is not a prediction.
-      expect(rate, `${id} resolved yes ${(rate * 100).toFixed(1)}%`).toBeGreaterThan(0.2);
-      expect(rate, `${id} resolved yes ${(rate * 100).toFixed(1)}%`).toBeLessThan(0.8);
+      expect(
+        rate,
+        `${id} resolved yes ${(rate * 100).toFixed(1)}%`,
+      ).toBeGreaterThan(0.2);
+      expect(
+        rate,
+        `${id} resolved yes ${(rate * 100).toFixed(1)}%`,
+      ).toBeLessThan(0.8);
     }
   });
 

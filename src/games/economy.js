@@ -90,7 +90,9 @@ export function submit(round, action) {
     : STARTING_COINS;
 
   if (totalQty(buys.legs) > capacity)
-    return reject(`cannot hold ${totalQty(buys.legs)} units, capacity is ${capacity}`);
+    return reject(
+      `cannot hold ${totalQty(buys.legs)} units, capacity is ${capacity}`,
+    );
 
   const totalBuyCost = buys.legs.reduce(
     (sum, leg) => sum + leg.qty * leg.price,
@@ -143,9 +145,12 @@ export function submit(round, action) {
 // Margins are linear and capacity is shared, so concentrating on the best
 // affordable spread is optimal.
 export function bestAction(round) {
-  if (!isPlainObject(round) || !Array.isArray(round.goods)) return { buy: [], sell: [] };
+  if (!isPlainObject(round) || !Array.isArray(round.goods))
+    return { buy: [], sell: [] };
   const capacity = Number.isInteger(round.capacity) ? round.capacity : CAPACITY;
-  const coins = Number.isInteger(round.startingCoins) ? round.startingCoins : STARTING_COINS;
+  const coins = Number.isInteger(round.startingCoins)
+    ? round.startingCoins
+    : STARTING_COINS;
   let best = { buy: [], sell: [], profit: 0 };
   for (const good of round.goods) {
     const margin = good.sell - good.buy;
@@ -153,7 +158,11 @@ export function bestAction(round) {
     const qty = Math.min(capacity, Math.floor(coins / good.buy));
     const profit = qty * margin;
     if (profit > best.profit)
-      best = { buy: [{ goodId: good.id, qty }], sell: [{ goodId: good.id, qty }], profit };
+      best = {
+        buy: [{ goodId: good.id, qty }],
+        sell: [{ goodId: good.id, qty }],
+        profit,
+      };
   }
   return { buy: best.buy, sell: best.sell };
 }

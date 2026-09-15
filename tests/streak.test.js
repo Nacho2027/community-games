@@ -17,7 +17,12 @@ function ledger(entries = []) {
 
 function actionsFor(periodKey, points) {
   const actions = {};
-  for (const game of registry) actions[`${game.meta.id}:${periodKey}`] = { gameId: game.meta.id, periodKey, points };
+  for (const game of registry)
+    actions[`${game.meta.id}:${periodKey}`] = {
+      gameId: game.meta.id,
+      periodKey,
+      points,
+    };
   return { actions, history: [], points: 0 };
 }
 
@@ -25,7 +30,9 @@ const TODAY = new Date("2026-03-04T12:00:00Z");
 
 describe("playedDays", () => {
   it("collects unique UTC days and ignores junk keys", () => {
-    const days = playedDays(ledger([["2026-03-01"], ["2026-03-01"], ["2026-W10"], ["nope"]]));
+    const days = playedDays(
+      ledger([["2026-03-01"], ["2026-03-01"], ["2026-W10"], ["nope"]]),
+    );
     expect([...days]).toEqual(["2026-03-01"]);
   });
 
@@ -81,7 +88,13 @@ describe("shareText", () => {
 
   it("includes the streak only once it is worth bragging about", () => {
     const state = {
-      actions: { "challenge:2026-03-04": { gameId: "challenge", periodKey: "2026-03-04", points: 10 } },
+      actions: {
+        "challenge:2026-03-04": {
+          gameId: "challenge",
+          periodKey: "2026-03-04",
+          points: 10,
+        },
+      },
       history: ledger([["2026-03-04"], ["2026-03-03"]]).history,
       points: 10,
     };

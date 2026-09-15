@@ -13,11 +13,10 @@ function challenge() {
     numberField(`n${index}`, `Number ${index + 1}`, { min: "0" }),
   );
   const ops = [0, 1].map((index) =>
-    field(`Operator ${index + 1}`, select(`op${index}`, [
-      { value: "+" },
-      { value: "-" },
-      { value: "*" },
-    ])),
+    field(
+      `Operator ${index + 1}`,
+      select(`op${index}`, [{ value: "+" }, { value: "-" }, { value: "*" }]),
+    ),
   );
   return {
     nodes: [...rows.map((row) => row.node), ...ops],
@@ -29,14 +28,17 @@ function challenge() {
 }
 
 function prediction(round) {
-  const choices = (round.options ?? []).map((item) => ({ value: item.id, label: item.label }));
-  const pick = select("pick", choices.length ? choices : [{ value: "yes" }, { value: "no" }]);
+  const choices = (round.options ?? []).map((item) => ({
+    value: item.id,
+    label: item.label,
+  }));
+  const pick = select(
+    "pick",
+    choices.length ? choices : [{ value: "yes" }, { value: "no" }],
+  );
   const confidence = range("confidence", 50, 100, 5, 70);
   return {
-    nodes: [
-      field("Your pick", pick),
-      field("How sure are you?", confidence),
-    ],
+    nodes: [field("Your pick", pick), field("How sure are you?", confidence)],
     read: (form) => ({
       pick: form.elements.pick.value,
       confidence: Number(form.elements.confidence.value),
@@ -45,8 +47,14 @@ function prediction(round) {
 }
 
 function faction(round) {
-  const choices = (round.factions ?? []).map((item) => ({ value: item.id, label: item.name }));
-  const want = select("factionId", choices.length ? choices : [{ value: "unknown" }]);
+  const choices = (round.factions ?? []).map((item) => ({
+    value: item.id,
+    label: item.name,
+  }));
+  const want = select(
+    "factionId",
+    choices.length ? choices : [{ value: "unknown" }],
+  );
   return {
     nodes: [field("Back a faction", want)],
     read: (form) => ({ factionId: form.elements.factionId.value }),
@@ -54,8 +62,14 @@ function faction(round) {
 }
 
 function mystery(round) {
-  const choices = (round.suspects ?? []).map((item) => ({ value: item.id, label: item.name }));
-  const want = select("suspectId", choices.length ? choices : [{ value: "unknown" }]);
+  const choices = (round.suspects ?? []).map((item) => ({
+    value: item.id,
+    label: item.name,
+  }));
+  const want = select(
+    "suspectId",
+    choices.length ? choices : [{ value: "unknown" }],
+  );
   return {
     nodes: [field("Accuse a suspect", want)],
     read: (form) => ({ suspectId: form.elements.suspectId.value }),
@@ -66,19 +80,37 @@ function economy(round) {
   const buyRows = [];
   const sellRows = [];
   for (const good of round.goods ?? []) {
-    const buy = numberField(`buy-${good.id}`, `Buy ${good.name} at ${good.buy}`, { min: "0", value: "0" });
-    const sell = numberField(`sell-${good.id}`, `Sell ${good.name} at ${good.sell}`, { min: "0", value: "0" });
+    const buy = numberField(
+      `buy-${good.id}`,
+      `Buy ${good.name} at ${good.buy}`,
+      { min: "0", value: "0" },
+    );
+    const sell = numberField(
+      `sell-${good.id}`,
+      `Sell ${good.name} at ${good.sell}`,
+      { min: "0", value: "0" },
+    );
     buyRows.push({ good: good.id, input: buy.input });
     sellRows.push({ good: good.id, input: sell.input });
   }
   return {
     nodes: [
-      ...buyRows.map((row) => row.input.closest?.("label") ?? row.input.parentElement),
-      ...sellRows.map((row) => row.input.closest?.("label") ?? row.input.parentElement),
+      ...buyRows.map(
+        (row) => row.input.closest?.("label") ?? row.input.parentElement,
+      ),
+      ...sellRows.map(
+        (row) => row.input.closest?.("label") ?? row.input.parentElement,
+      ),
     ],
     read: (form) => ({
-      buy: buyRows.map((row) => ({ goodId: row.good, qty: Number(form.elements[row.input.name].value) })),
-      sell: sellRows.map((row) => ({ goodId: row.good, qty: Number(form.elements[row.input.name].value) })),
+      buy: buyRows.map((row) => ({
+        goodId: row.good,
+        qty: Number(form.elements[row.input.name].value),
+      })),
+      sell: sellRows.map((row) => ({
+        goodId: row.good,
+        qty: Number(form.elements[row.input.name].value),
+      })),
     }),
   };
 }

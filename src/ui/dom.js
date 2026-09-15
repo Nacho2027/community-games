@@ -11,7 +11,9 @@ export function el(tag, props = {}, children = []) {
   }
   for (const child of [].concat(children)) {
     if (child === null || child === undefined || child === false) continue;
-    node.append(typeof child === "string" ? document.createTextNode(child) : child);
+    node.append(
+      typeof child === "string" ? document.createTextNode(child) : child,
+    );
   }
   return node;
 }
@@ -33,7 +35,10 @@ export function clear(node) {
 }
 
 export function field(labelText, control) {
-  return el("label", { class: "field" }, [el("span", { text: labelText }), control]);
+  return el("label", { class: "field" }, [
+    el("span", { text: labelText }),
+    control,
+  ]);
 }
 
 // Number range input with a live readout.

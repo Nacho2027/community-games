@@ -15,14 +15,21 @@ function challenge(round) {
   return [
     el("p", { text: `Target: ${round.target}` }),
     el("p", { class: "muted", text: `Pool: ${(round.pool ?? []).join(", ")}` }),
-    el("p", { class: "muted", text: "Use exactly three pool numbers with + - * (evaluated left to right)." }),
+    el("p", {
+      class: "muted",
+      text: "Use exactly three pool numbers with + - * (evaluated left to right).",
+    }),
   ];
 }
 
 function prediction(round) {
   return [
     el("p", { text: round.question ?? "" }),
-    el("ul", {}, (round.options ?? []).map((item) => el("li", { text: item.label }))),
+    el(
+      "ul",
+      {},
+      (round.options ?? []).map((item) => el("li", { text: item.label })),
+    ),
     el("p", {
       class: "muted",
       text: "Scored on accuracy: naming your true confidence beats always saying 100%, because an overconfident miss costs almost everything.",
@@ -41,10 +48,14 @@ function faction(round) {
   return [
     el("p", { class: "muted", text: round.rule ?? "" }),
     el("table", {}, [
-      el("thead", {}, el("tr", {}, [
-        el("th", { text: "Faction" }),
-        el("th", { text: "Opening turn" }),
-      ])),
+      el(
+        "thead",
+        {},
+        el("tr", {}, [
+          el("th", { text: "Faction" }),
+          el("th", { text: "Opening turn" }),
+        ]),
+      ),
       el("tbody", {}, rows),
     ]),
     el("p", {
@@ -56,29 +67,47 @@ function faction(round) {
 
 function mystery(round) {
   return [
-    el("ul", {}, (round.clues ?? []).map((clue) => el("li", { text: clue.text ?? clue }))),
-    el("p", { class: "muted", text: "Exactly one suspect survives all clues." }),
+    el(
+      "ul",
+      {},
+      (round.clues ?? []).map((clue) => el("li", { text: clue.text ?? clue })),
+    ),
+    el("p", {
+      class: "muted",
+      text: "Exactly one suspect survives all clues.",
+    }),
   ];
 }
 
 function economy(round) {
   return [
     el("table", {}, [
-      el("thead", {}, el("tr", {}, [
-        el("th", { text: "Good" }),
-        el("th", { text: "Buy" }),
-        el("th", { text: "Sell" }),
-        el("th", { text: "Trend" }),
-      ])),
-      el("tbody", {}, (round.goods ?? []).map((good) =>
+      el(
+        "thead",
+        {},
         el("tr", {}, [
-          el("td", { text: good.name }),
-          el("td", { text: String(good.buy) }),
-          el("td", { text: String(good.sell) }),
-          el("td", { text: good.trend }),
+          el("th", { text: "Good" }),
+          el("th", { text: "Buy" }),
+          el("th", { text: "Sell" }),
+          el("th", { text: "Trend" }),
         ]),
-      )),
+      ),
+      el(
+        "tbody",
+        {},
+        (round.goods ?? []).map((good) =>
+          el("tr", {}, [
+            el("td", { text: good.name }),
+            el("td", { text: String(good.buy) }),
+            el("td", { text: String(good.sell) }),
+            el("td", { text: good.trend }),
+          ]),
+        ),
+      ),
     ]),
-    el("p", { class: "muted", text: `${round.startingCoins} coins, ${round.capacity} units of capacity.` }),
+    el("p", {
+      class: "muted",
+      text: `${round.startingCoins} coins, ${round.capacity} units of capacity.`,
+    }),
   ];
 }

@@ -68,7 +68,9 @@ describe("ten-year round integrity", () => {
   });
 
   it("Daily Numbers is solvable on every single day", () => {
-    const unsolvable = horizon().filter((key) => !challenge.solve(challenge.roundFor(key)));
+    const unsolvable = horizon().filter(
+      (key) => !challenge.solve(challenge.roundFor(key)),
+    );
     expect(unsolvable).toEqual([]);
   });
 
@@ -86,7 +88,9 @@ describe("ten-year round integrity", () => {
         for (const suspect of round.suspects)
           if (suspect[target.kind] === target.value) excluded.add(suspect.id);
       }
-      const remaining = round.suspects.filter((suspect) => !excluded.has(suspect.id));
+      const remaining = round.suspects.filter(
+        (suspect) => !excluded.has(suspect.id),
+      );
       return remaining.length !== 1 || remaining[0].id !== culprit;
     });
     expect(ambiguous).toEqual([]);
@@ -97,7 +101,11 @@ describe("ten-year round integrity", () => {
     for (const key of horizon()) {
       const round = economy.roundFor(key);
       const verdict = economy.submit(round, economy.bestAction(round));
-      if (!verdict.accepted || verdict.points <= 0 || verdict.points > economy.meta.maxPoints)
+      if (
+        !verdict.accepted ||
+        verdict.points <= 0 ||
+        verdict.points > economy.meta.maxPoints
+      )
         broken.push(key);
     }
     expect(broken).toEqual([]);
@@ -125,7 +133,11 @@ describe("ten-year round integrity", () => {
         for (const action of options) {
           const verdict = game.submit(round, action);
           if (verdict.accepted === false) continue;
-          if (!Number.isInteger(verdict.points) || verdict.points < 0 || verdict.points > game.meta.maxPoints)
+          if (
+            !Number.isInteger(verdict.points) ||
+            verdict.points < 0 ||
+            verdict.points > game.meta.maxPoints
+          )
             offenders.push(`${game.meta.id} ${key} -> ${verdict.points}`);
         }
       }
@@ -136,7 +148,9 @@ describe("ten-year round integrity", () => {
   it("keeps every game deterministic across the horizon", () => {
     for (const key of horizon(300)) {
       for (const game of registry) {
-        expect(JSON.stringify(game.roundFor(key))).toBe(JSON.stringify(game.roundFor(key)));
+        expect(JSON.stringify(game.roundFor(key))).toBe(
+          JSON.stringify(game.roundFor(key)),
+        );
       }
     }
   });
@@ -151,7 +165,15 @@ describe("registry wiring", () => {
 
   it("keeps the platform-neutral play() path consistent for all five games", () => {
     const ids = registry.map((game) => game.meta.id);
-    expect(ids).toEqual(["challenge", "prediction", "faction", "mystery", "economy"]);
-    expect(gameById("challenge").roundFor(KEY)).toEqual(challenge.roundFor(KEY));
+    expect(ids).toEqual([
+      "challenge",
+      "prediction",
+      "faction",
+      "mystery",
+      "economy",
+    ]);
+    expect(gameById("challenge").roundFor(KEY)).toEqual(
+      challenge.roundFor(KEY),
+    );
   });
 });

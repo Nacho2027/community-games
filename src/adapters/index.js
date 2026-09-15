@@ -35,7 +35,10 @@ export function createLocalAdapter({ storage = globalThis.localStorage } = {}) {
   };
 }
 
-export function createHttpAdapter({ endpoint, fetchImpl = globalThis.fetch } = {}) {
+export function createHttpAdapter({
+  endpoint,
+  fetchImpl = globalThis.fetch,
+} = {}) {
   if (!endpoint) throw new Error("createHttpAdapter requires an endpoint");
   if (typeof fetchImpl !== "function") throw new Error("fetch is unavailable");
   let state = createState();
@@ -70,7 +73,8 @@ export function createHttpAdapter({ endpoint, fetchImpl = globalThis.fetch } = {
         const outcome = await request("/play", { gameId, action });
         // Trust the server's ledger over anything the client already had.
         // The server returns a ledger, not a full state, so merge it in.
-        if (outcome?.state) state = createState({ ...state, ledger: outcome.state });
+        if (outcome?.state)
+          state = createState({ ...state, ledger: outcome.state });
         return {
           accepted: Boolean(outcome?.accepted),
           reason: outcome?.reason ?? null,

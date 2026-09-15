@@ -1,4 +1,9 @@
-import { applyAction, canPlay, createLedger, pointsFor } from "../engine/actions.js";
+import {
+  applyAction,
+  canPlay,
+  createLedger,
+  pointsFor,
+} from "../engine/actions.js";
 import { periodKeyFor } from "../engine/period.js";
 import * as challenge from "./challenge.js";
 import * as economy from "./economy.js";
@@ -25,7 +30,12 @@ export function periodFor(game, date = new Date()) {
 export function play(ledger, gameId, action, date = new Date()) {
   const game = gameById(gameId);
   if (!game) {
-    return { accepted: false, reason: "unknown-game", points: 0, state: ledger };
+    return {
+      accepted: false,
+      reason: "unknown-game",
+      points: 0,
+      state: ledger,
+    };
   }
   const periodKey = periodFor(game, date);
   if (!canPlay(ledger, gameId, periodKey)) {

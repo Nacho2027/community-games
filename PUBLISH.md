@@ -29,11 +29,24 @@ Requirements:
 - A dedicated, non-test subreddit you moderate
 - Node 22+
 
-The CLI is already installed and wired into scripts, so this is a single command:
+The CLI is installed and wired into scripts. Verified state after `npm run login`:
+
+- `npm run whoami` -> `Logged in as u/MaintenanceLive7212` (login is done)
+- `devvit.json` parses cleanly against `@devvit/shared-types/schemas/config-file.v1.json`
+- `node build.mjs` produces `public/` (client) and `dist-server/index.js` (34 kB self-contained
+  CommonJS server bundle, as the schema requires)
+
+**One human step remains.** `npm run upload` stops with:
+
+```
+Please finish setting up your developer account before proceeding:
+https://developers.reddit.com/create-account?cli=true
+```
+
+That page is where the developer account and its terms are accepted. After it:
 
 ```bash
 cd reddit
-npm run login      # only step that needs you: opens reddit.com in a browser
 npm run upload     # runs the full test suite, builds, then uploads
 npm run playtest   # installs to your test subreddit
 ```

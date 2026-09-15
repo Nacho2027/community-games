@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { createState, loadState, saveState, STORAGE_KEY } from "../src/state.js";
+import {
+  createState,
+  loadState,
+  saveState,
+  STORAGE_KEY,
+} from "../src/state.js";
 import { createLedger } from "../src/engine/actions.js";
 
 function storage(seed = {}) {
@@ -23,8 +28,22 @@ describe("state", () => {
     const state = createState({
       player: { id: "p1", name: "Ada" },
       ledger: {
-        actions: { "challenge:2026-01-01": { gameId: "challenge", periodKey: "2026-01-01", points: 10, at: "2026-01-01T00:00:00.000Z" } },
-        history: [{ gameId: "challenge", periodKey: "2026-01-01", points: 10, at: "2026-01-01T00:00:00.000Z" }],
+        actions: {
+          "challenge:2026-01-01": {
+            gameId: "challenge",
+            periodKey: "2026-01-01",
+            points: 10,
+            at: "2026-01-01T00:00:00.000Z",
+          },
+        },
+        history: [
+          {
+            gameId: "challenge",
+            periodKey: "2026-01-01",
+            points: 10,
+            at: "2026-01-01T00:00:00.000Z",
+          },
+        ],
       },
     });
     saveState(state, store);
@@ -33,15 +52,29 @@ describe("state", () => {
   });
 
   it("recovers from malformed JSON", () => {
-    expect(loadState(storage({ [STORAGE_KEY]: "not-json" }))).toEqual(createState());
+    expect(loadState(storage({ [STORAGE_KEY]: "not-json" }))).toEqual(
+      createState(),
+    );
   });
 
   it("coerces tampered values into a safe shape", () => {
     const tampered = JSON.stringify({
       player: { id: 42, name: null },
       ledger: {
-        actions: { bad: { gameId: 1 }, "challenge:2026-01-01": { gameId: "challenge", periodKey: "2026-01-01", points: "9999", at: null } },
-        history: [{ gameId: "challenge", periodKey: "2026-01-01", points: "5" }, null, "nope"],
+        actions: {
+          bad: { gameId: 1 },
+          "challenge:2026-01-01": {
+            gameId: "challenge",
+            periodKey: "2026-01-01",
+            points: "9999",
+            at: null,
+          },
+        },
+        history: [
+          { gameId: "challenge", periodKey: "2026-01-01", points: "5" },
+          null,
+          "nope",
+        ],
         points: "abc",
       },
     });
@@ -61,15 +94,21 @@ describe("state", () => {
       points: 1,
       at: "2026-01-01T00:00:00.000Z",
     }));
-    const state = loadState(storage({ [STORAGE_KEY]: JSON.stringify({ ledger: { history } }) }));
+    const state = loadState(
+      storage({ [STORAGE_KEY]: JSON.stringify({ ledger: { history } }) }),
+    );
     expect(state.ledger.history).toHaveLength(200);
     expect(state.ledger.points).toBe(200);
   });
 
   it("survives storage that throws", () => {
     const hostile = {
-      getItem: () => { throw new Error("denied"); },
-      setItem: () => { throw new Error("quota"); },
+      getItem: () => {
+        throw new Error("denied");
+      },
+      setItem: () => {
+        throw new Error("quota");
+      },
     };
     expect(loadState(hostile)).toEqual(createState());
     expect(saveState(createState(), hostile)).toBe(false);

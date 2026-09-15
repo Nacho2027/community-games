@@ -1,5 +1,8 @@
 import { rngFor } from "../engine/rng.js";
-import { roundFor as challengeRound, solve as challengeSolve } from "./challenge.js";
+import {
+  roundFor as challengeRound,
+  solve as challengeSolve,
+} from "./challenge.js";
 
 export const meta = {
   id: "prediction",
@@ -28,13 +31,16 @@ const TEMPLATES = [
   },
   {
     id: "largest",
-    question: "Will today's Numbers solution use the largest number in the pool?",
+    question:
+      "Will today's Numbers solution use the largest number in the pool?",
     metric: "today's solution",
-    test: (round, solution) => Math.max(...round.pool) === Math.max(...solution.numbers),
+    test: (round, solution) =>
+      Math.max(...round.pool) === Math.max(...solution.numbers),
   },
   {
     id: "aboveTarget",
-    question: "Will the three numbers in today's solution sum to more than the target?",
+    question:
+      "Will the three numbers in today's solution sum to more than the target?",
     metric: "today's solution",
     test: (round, solution) =>
       solution.numbers.reduce((sum, value) => sum + value, 0) > round.target,
@@ -48,7 +54,8 @@ const TEMPLATES = [
   },
   {
     id: "product",
-    question: "Will the plain sum of today's three solution numbers be an even number?",
+    question:
+      "Will the plain sum of today's three solution numbers be an even number?",
     metric: "today's solution",
     test: (_round, solution) =>
       solution.numbers.reduce((sum, value) => sum + value, 0) % 2 === 0,

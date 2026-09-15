@@ -31,7 +31,9 @@ describe("server api", () => {
   it("rejects unauthenticated callers", async () => {
     const { api } = harness({ authenticated: false });
     expect((await api.state()).status).toBe(401);
-    expect((await api.play({ gameId: "challenge", action: {} })).status).toBe(401);
+    expect((await api.play({ gameId: "challenge", action: {} })).status).toBe(
+      401,
+    );
   });
 
   it("returns the player and their progress", async () => {

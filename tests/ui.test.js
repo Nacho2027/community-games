@@ -76,7 +76,9 @@ describe("ui shell", () => {
 
   it("renders a tab for every game", async () => {
     const { root } = await mount();
-    const labels = [...root.querySelectorAll("nav button")].map((node) => node.textContent);
+    const labels = [...root.querySelectorAll("nav button")].map(
+      (node) => node.textContent,
+    );
     expect(labels).toEqual(registry.map((game) => game.meta.title));
   });
 
@@ -86,7 +88,9 @@ describe("ui shell", () => {
     const solution = challenge.solve(round);
 
     tab(root, challenge.meta.title);
-    solution.numbers.forEach((value, index) => setField(root, `n${index}`, value));
+    solution.numbers.forEach((value, index) =>
+      setField(root, `n${index}`, value),
+    );
     solution.ops.forEach((value, index) => setField(root, `op${index}`, value));
     await submitForm(root);
 
@@ -119,9 +123,9 @@ describe("ui shell", () => {
 
   it("plays Faction War through the rendered form", async () => {
     const { root, getState } = await mount();
-    const round = registry.find((game) => game.meta.id === "faction").roundFor(
-      periodFor(registry.find((game) => game.meta.id === "faction")),
-    );
+    const round = registry
+      .find((game) => game.meta.id === "faction")
+      .roundFor(periodFor(registry.find((game) => game.meta.id === "faction")));
 
     tab(root, "Faction War");
     setField(root, "factionId", round.factions[0].id);
@@ -135,7 +139,9 @@ describe("ui shell", () => {
     const { root, getState } = await mount();
     const game = registry.find((item) => item.meta.id === "economy");
     const round = game.roundFor(periodFor(game));
-    const best = [...round.goods].sort((a, b) => b.sell - b.buy - (a.sell - a.buy))[0];
+    const best = [...round.goods].sort(
+      (a, b) => b.sell - b.buy - (a.sell - a.buy),
+    )[0];
 
     tab(root, "Community Market");
     setField(root, `buy-${best.id}`, 2);
@@ -151,7 +157,9 @@ describe("ui shell", () => {
     const solution = challenge.solve(round);
 
     tab(root, challenge.meta.title);
-    solution.numbers.forEach((value, index) => setField(root, `n${index}`, value));
+    solution.numbers.forEach((value, index) =>
+      setField(root, `n${index}`, value),
+    );
     solution.ops.forEach((value, index) => setField(root, `op${index}`, value));
     await submitForm(root);
     const after = getState().ledger.points;
@@ -208,7 +216,8 @@ describe("ui shell", () => {
     const preview = root.querySelector(".share .result");
     expect(preview.textContent).toContain("Community Games");
     expect(preview.textContent).toContain("Total 0");
-    for (const game of registry) expect(preview.textContent).toContain(game.meta.title);
+    for (const game of registry)
+      expect(preview.textContent).toContain(game.meta.title);
     // Sharing must never reveal an answer.
     for (const leak of ["solution", "culprit", "outcome", "ops"])
       expect(preview.textContent).not.toContain(leak);
@@ -217,7 +226,10 @@ describe("ui shell", () => {
   it("still produces the result when the clipboard is unavailable", async () => {
     // jsdom has no clipboard, and neither do some real browsers on http origins.
     const original = navigator.clipboard;
-    Object.defineProperty(navigator, "clipboard", { value: undefined, configurable: true });
+    Object.defineProperty(navigator, "clipboard", {
+      value: undefined,
+      configurable: true,
+    });
     try {
       const { root } = await mount();
       const button = [...root.querySelectorAll("button")].find(
@@ -226,9 +238,14 @@ describe("ui shell", () => {
       button.click();
       await flush();
       // Degrades to a visible, selectable result instead of throwing.
-      expect(root.querySelector(".share .result").textContent).toContain("Community Games");
+      expect(root.querySelector(".share .result").textContent).toContain(
+        "Community Games",
+      );
     } finally {
-      Object.defineProperty(navigator, "clipboard", { value: original, configurable: true });
+      Object.defineProperty(navigator, "clipboard", {
+        value: original,
+        configurable: true,
+      });
     }
   });
 
@@ -246,7 +263,9 @@ describe("ui shell", () => {
     const solution = challenge.solve(round);
 
     tab(root, challenge.meta.title);
-    solution.numbers.forEach((value, index) => setField(root, `n${index}`, value));
+    solution.numbers.forEach((value, index) =>
+      setField(root, `n${index}`, value),
+    );
     solution.ops.forEach((value, index) => setField(root, `op${index}`, value));
     await submitForm(root);
 

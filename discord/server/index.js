@@ -18,7 +18,10 @@ export function createDiscordApi({ verifySession }) {
     identify: async () => {
       const session = await verifySession();
       if (!session?.user?.id) throw new Error("unauthenticated");
-      return { id: session.user.id, name: session.user.username ?? session.user.id };
+      return {
+        id: session.user.id,
+        name: session.user.username ?? session.user.id,
+      };
     },
     loadLedger: async (player) => ledgers.get(player.id) ?? createLedger(),
     saveLedger: async (player, ledger) => {

@@ -14,10 +14,15 @@ const strategy = {
   mystery: (game, round) => ({ suspectId: mystery.solve(round) }),
   economy: (game, round) => {
     // Capacity limits TOTAL units traded (bought + sold), and you cannot sell more than you bought.
-    const best = [...round.goods].sort((a, b) => b.sell - b.buy - (a.sell - a.buy))[0];
+    const best = [...round.goods].sort(
+      (a, b) => b.sell - b.buy - (a.sell - a.buy),
+    )[0];
     const budget = Math.floor(round.startingCoins / best.buy);
     const qty = Math.min(budget, Math.floor(round.capacity / 2));
-    return { buy: [{ goodId: best.id, qty }], sell: [{ goodId: best.id, qty }] };
+    return {
+      buy: [{ goodId: best.id, qty }],
+      sell: [{ goodId: best.id, qty }],
+    };
   },
 };
 
@@ -97,11 +102,17 @@ describe("integration: play()", () => {
     let ledger = createLedger();
     for (const game of registry) {
       const round = game.roundFor("2026-03-04");
-      ledger = play(ledger, game.meta.id, strategy[game.meta.id](game, round), AT).state;
+      ledger = play(
+        ledger,
+        game.meta.id,
+        strategy[game.meta.id](game, round),
+        AT,
+      ).state;
     }
     expect(ledger.history).toHaveLength(5);
     expect(ledger.points).toBeGreaterThan(0);
-    for (const id of gameIds()) expect(pointsFor(ledger, id)).toBeGreaterThan(0);
+    for (const id of gameIds())
+      expect(pointsFor(ledger, id)).toBeGreaterThan(0);
   });
 });
 
@@ -110,13 +121,22 @@ describe("integration: one attempt per period", () => {
   // brute-force the answer by resubmitting until it lands.
   const losing = {
     challenge: (game, round) => {
-      for (const ops of [["+", "+"], ["-", "-"], ["*", "*"], ["+", "-"], ["-", "+"]]) {
+      for (const ops of [
+        ["+", "+"],
+        ["-", "-"],
+        ["*", "*"],
+        ["+", "-"],
+        ["-", "+"],
+      ]) {
         const action = { numbers: round.pool.slice(0, 3), ops };
         if (game.submit(round, action).points === 0) return action;
       }
       throw new Error("no losing challenge action found");
     },
-    prediction: (_game, round) => ({ pick: round.options?.[1]?.id ?? "no", confidence: 50 }),
+    prediction: (_game, round) => ({
+      pick: round.options?.[1]?.id ?? "no",
+      confidence: 50,
+    }),
     faction: (_game, round) => ({ factionId: round.factions[0].id }),
     mystery: (_game, round) => ({ suspectId: round.suspects[0].id }),
     economy: () => ({ buy: [], sell: [] }),

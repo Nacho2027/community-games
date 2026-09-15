@@ -7,7 +7,10 @@ import { dayKey } from "./period.js";
 export function playedDays(ledger) {
   const days = new Set();
   for (const entry of ledger?.history ?? []) {
-    if (typeof entry?.periodKey === "string" && /^\d{4}-\d{2}-\d{2}$/.test(entry.periodKey))
+    if (
+      typeof entry?.periodKey === "string" &&
+      /^\d{4}-\d{2}-\d{2}$/.test(entry.periodKey)
+    )
       days.add(entry.periodKey);
   }
   return days;
@@ -36,7 +39,10 @@ export function shareText(ledger, games, today = new Date()) {
     const entry = ledger.actions?.[`${game.meta.id}:${date}`];
     const points = entry?.points ?? null;
     if (points === null) lines.push(`${game.meta.title} - not played`);
-    else lines.push(`${game.meta.title} ${points > 0 ? "\u2705" : "\u274c"} ${points}`);
+    else
+      lines.push(
+        `${game.meta.title} ${points > 0 ? "\u2705" : "\u274c"} ${points}`,
+      );
     total += points ?? 0;
   }
   const streak = dailyStreak(ledger, today);

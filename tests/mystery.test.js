@@ -38,10 +38,16 @@ describe("mystery round content", () => {
     for (const key of keys(60)) {
       const round = roundFor(key);
       expect(round.suspects).toHaveLength(4);
-      expect(new Set(round.suspects.map((suspect) => suspect.name)).size).toBe(4);
+      expect(new Set(round.suspects.map((suspect) => suspect.name)).size).toBe(
+        4,
+      );
       // Distinct attributes are what make a single clue eliminate exactly one person.
-      expect(new Set(round.suspects.map((suspect) => suspect.whereabouts)).size).toBe(4);
-      expect(new Set(round.suspects.map((suspect) => suspect.carried)).size).toBe(4);
+      expect(
+        new Set(round.suspects.map((suspect) => suspect.whereabouts)).size,
+      ).toBe(4);
+      expect(
+        new Set(round.suspects.map((suspect) => suspect.carried)).size,
+      ).toBe(4);
     }
   });
 
@@ -53,7 +59,9 @@ describe("mystery round content", () => {
       const round = roundFor(key);
       for (const clue of round.clues)
         for (const suspect of round.suspects)
-          expect(clue.text, `${key} named ${suspect.name}`).not.toContain(suspect.name);
+          expect(clue.text, `${key} named ${suspect.name}`).not.toContain(
+            suspect.name,
+          );
     }
   });
 
@@ -80,7 +88,8 @@ describe("mystery round content", () => {
 
   it("uses the whole clue vocabulary rather than one template", () => {
     const used = new Set();
-    for (const key of keys(400)) for (const clue of roundFor(key).clues) used.add(clue.text);
+    for (const key of keys(400))
+      for (const clue of roundFor(key).clues) used.add(clue.text);
     const vocabulary = LOCATIONS.length + ITEMS.length;
     expect(used.size).toBeGreaterThan(vocabulary * 0.5);
   });
@@ -126,7 +135,9 @@ describe("mystery scoring", () => {
       expect(right.points).toBe(meta.maxPoints);
       expect(right.result.correct).toBe(true);
 
-      for (const suspect of round.suspects.filter((item) => item.id !== culprit)) {
+      for (const suspect of round.suspects.filter(
+        (item) => item.id !== culprit,
+      )) {
         const wrong = submit(round, { suspectId: suspect.id });
         expect(wrong.accepted).toBe(true);
         expect(wrong.points).toBe(0);
@@ -139,7 +150,14 @@ describe("mystery scoring", () => {
 
   it("rejects malformed input without throwing", () => {
     const round = roundFor("2026-03-04");
-    for (const action of [undefined, null, {}, { suspectId: "nope" }, { suspectId: 7 }, []]) {
+    for (const action of [
+      undefined,
+      null,
+      {},
+      { suspectId: "nope" },
+      { suspectId: 7 },
+      [],
+    ]) {
       const verdict = submit(round, action);
       expect(verdict.accepted).toBe(false);
       expect(verdict.points).toBe(0);

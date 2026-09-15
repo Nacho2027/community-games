@@ -24,25 +24,73 @@ const NAMES = [
 // and never repeat the attribute they rule out, so the player has to connect the evidence
 // to the attribute and then to the person holding it.
 export const LOCATIONS = [
-  { value: "at sea", clue: "The harbourmaster swore not a single boat left the docks that night." },
-  { value: "in the town jail", clue: "The constable's ledger shows every cell bolted and empty from dusk to dawn." },
-  { value: "on stage", clue: "Two hundred witnesses watched the whole performance without one absence." },
-  { value: "snowed in at the pass", clue: "The mountain road lay under six feet of snow until sunrise." },
-  { value: "three hundred miles away", clue: "The sealed letter was signed and dated in a city beyond the county line." },
-  { value: "bedridden in the infirmary", clue: "The physician's rounds found every fever patient accounted for until morning." },
-  { value: "in the clocktower", clue: "The tower stair was thick with undisturbed dust from top to bottom." },
-  { value: "at the county fair", clue: "The fair gates were chained shut well before the bells rang." },
+  {
+    value: "at sea",
+    clue: "The harbourmaster swore not a single boat left the docks that night.",
+  },
+  {
+    value: "in the town jail",
+    clue: "The constable's ledger shows every cell bolted and empty from dusk to dawn.",
+  },
+  {
+    value: "on stage",
+    clue: "Two hundred witnesses watched the whole performance without one absence.",
+  },
+  {
+    value: "snowed in at the pass",
+    clue: "The mountain road lay under six feet of snow until sunrise.",
+  },
+  {
+    value: "three hundred miles away",
+    clue: "The sealed letter was signed and dated in a city beyond the county line.",
+  },
+  {
+    value: "bedridden in the infirmary",
+    clue: "The physician's rounds found every fever patient accounted for until morning.",
+  },
+  {
+    value: "in the clocktower",
+    clue: "The tower stair was thick with undisturbed dust from top to bottom.",
+  },
+  {
+    value: "at the county fair",
+    clue: "The fair gates were chained shut well before the bells rang.",
+  },
 ];
 
 export const ITEMS = [
-  { value: "a brass key", clue: "Every lock in the house was still bolted from the inside; nothing had been forced." },
-  { value: "a lit lantern", clue: "The corridors were pitch dark, and no lamp had been filled since the week before." },
-  { value: "a sealed letter", clue: "The writing desk was untouched, its wax and ribbon still neatly coiled." },
-  { value: "a heavy case", clue: "The floorboards showed no fresh scuffs or dents anywhere along the hall." },
-  { value: "a coil of rope", clue: "The garden shed was locked and its shelves stocked to the last length." },
-  { value: "a silver watch", clue: "The watchmaker confirmed his display case was complete when the shop closed." },
-  { value: "a muddy coat", clue: "The entrance mat was dry and spotless, and the storm had passed hours earlier." },
-  { value: "a crate of wine", clue: "The cellar inventory matched its ledger exactly, down to the last bottle." },
+  {
+    value: "a brass key",
+    clue: "Every lock in the house was still bolted from the inside; nothing had been forced.",
+  },
+  {
+    value: "a lit lantern",
+    clue: "The corridors were pitch dark, and no lamp had been filled since the week before.",
+  },
+  {
+    value: "a sealed letter",
+    clue: "The writing desk was untouched, its wax and ribbon still neatly coiled.",
+  },
+  {
+    value: "a heavy case",
+    clue: "The floorboards showed no fresh scuffs or dents anywhere along the hall.",
+  },
+  {
+    value: "a coil of rope",
+    clue: "The garden shed was locked and its shelves stocked to the last length.",
+  },
+  {
+    value: "a silver watch",
+    clue: "The watchmaker confirmed his display case was complete when the shop closed.",
+  },
+  {
+    value: "a muddy coat",
+    clue: "The entrance mat was dry and spotless, and the storm had passed hours earlier.",
+  },
+  {
+    value: "a crate of wine",
+    clue: "The cellar inventory matched its ledger exactly, down to the last bottle.",
+  },
 ];
 
 // Atmosphere only. These must not name a suspect or an attribute.
@@ -117,7 +165,10 @@ export function build(periodKey) {
     round: {
       seed: String(periodKey),
       suspects,
-      clues: shuffle(rng, clues).map((clue, index) => ({ id: `c${index}`, text: clue.text })),
+      clues: shuffle(rng, clues).map((clue, index) => ({
+        id: `c${index}`,
+        text: clue.text,
+      })),
     },
   };
 }
@@ -158,7 +209,8 @@ export function solve(round) {
 export function submit(round, action) {
   if (!isRound(round)) return reject("Round data is unavailable.");
 
-  const suspectId = typeof action?.suspectId === "string" ? action.suspectId : undefined;
+  const suspectId =
+    typeof action?.suspectId === "string" ? action.suspectId : undefined;
   const accused = suspectId
     ? round.suspects.find((suspect) => suspect.id === suspectId)
     : undefined;
@@ -166,7 +218,9 @@ export function submit(round, action) {
 
   // Derive the culprit from the published evidence rather than trusting the round object.
   const excluded = excludedBy(round);
-  const remaining = round.suspects.filter((suspect) => !excluded.has(suspect.id));
+  const remaining = round.suspects.filter(
+    (suspect) => !excluded.has(suspect.id),
+  );
   if (remaining.length !== 1) return reject("This case is not solvable today.");
 
   const culprit = remaining[0];
