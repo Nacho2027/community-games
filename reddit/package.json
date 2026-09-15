@@ -1,0 +1,13 @@
+{
+  "name": "community-games-reddit",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "npm --prefix .. run build",
+    "upload": "devvit upload",
+    "playtest": "devvit playtest"
+  },
+  "dependencies": {
+    "@devvit/web": "latest"
+  }
+}

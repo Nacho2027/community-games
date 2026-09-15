@@ -1,0 +1,41 @@
+{
+  "$schema": "https://developers.reddit.com/schema/devvit.json",
+  "name": "community-games",
+  "server": {
+    "dir": "server",
+    "entry": "index.js"
+  },
+  "client": {
+    "dir": "../dist",
+    "entry": "index.html"
+  },
+  "menu": {
+    "items": [
+      {
+        "label": "Play Community Games",
+        "description": "Post today's community games",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/menu/post-games"
+      }
+    ]
+  },
+  "forms": {
+    "postGames": "/internal/form/post-games"
+  },
+  "scripts": {
+    "build": "npm --prefix .. run build"
+  },
+  "permissions": {
+    "reddit": {
+      "enable": true,
+      "scope": "moderator"
+    },
+    "redis": true,
+    "realtime": true
+  },
+  "payments": {
+    "enabled": false,
+    "note": "Enable only after Reddit Earn Terms acceptance and product approval."
+  }
+}
