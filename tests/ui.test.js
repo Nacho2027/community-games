@@ -5,22 +5,34 @@ import { createShell } from "../src/ui/shell.js";
 import * as challenge from "../src/games/challenge.js";
 import * as mystery from "../src/games/mystery.js";
 import { periodFor, registry } from "../src/games/index.js";
+import { STORAGE_KEY } from "../src/state.js";
 
 // End-to-end proof that each game is playable through the real rendered UI:
 // click the tab, fill the generated form, submit, and see the score move.
 
-function memoryStorage() {
-  const data = new Map();
+function memoryStorage(seed = {}) {
+  const data = new Map(Object.entries(seed));
   return {
     getItem: (key) => data.get(key) ?? null,
     setItem: (key, value) => data.set(key, String(value)),
   };
 }
 
-async function mount() {
+// Three consecutive UTC days ending today, so the streak is 3.
+function recentDays(count) {
+  const days = [];
+  const cursor = new Date();
+  for (let index = 0; index < count; index += 1) {
+    days.push(cursor.toISOString().slice(0, 10));
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  }
+  return days;
+}
+
+async function mount({ storage = memoryStorage() } = {}) {
   const root = document.createElement("div");
   document.body.append(root);
-  const adapter = createLocalAdapter({ storage: memoryStorage() });
+  const adapter = createLocalAdapter({ storage });
   let state = await adapter.load();
   createShell({
     root,
@@ -157,5 +169,89 @@ describe("ui shell", () => {
     setField(root, "n2", 999);
     await submitForm(root);
     expect(root.querySelector(".feedback").textContent).toContain("Rejected");
+  });
+
+  it("shows the streak once it is worth bragging about", async () => {
+    // Streaks drive returning players, which is what engagement payouts reward.
+    const days = recentDays(3);
+    const storage = memoryStorage({
+      [STORAGE_KEY]: JSON.stringify({
+        ledger: {
+          history: days.map((periodKey) => ({
+            gameId: "challenge",
+            periodKey,
+            points: 10,
+            at: `${periodKey}T00:00:00.000Z`,
+          })),
+        },
+      }),
+    });
+    const { root } = await mount({ storage });
+    expect(root.textContent).toContain("3-day streak");
+    expect(root.querySelector(".score").textContent).toContain("Points: 30");
+  });
+
+  it("hides the streak on a first visit", async () => {
+    const { root } = await mount();
+    expect(root.textContent).not.toContain("day streak");
+  });
+
+  it("copies a spoiler-free result covering every game", async () => {
+    const { root } = await mount();
+    const button = [...root.querySelectorAll("button")].find(
+      (node) => node.textContent === "Copy today's result",
+    );
+    expect(button).toBeTruthy();
+    button.click();
+    await flush();
+
+    const preview = root.querySelector(".share .result");
+    expect(preview.textContent).toContain("Community Games");
+    expect(preview.textContent).toContain("Total 0");
+    for (const game of registry) expect(preview.textContent).toContain(game.meta.title);
+    // Sharing must never reveal an answer.
+    for (const leak of ["solution", "culprit", "outcome", "ops"])
+      expect(preview.textContent).not.toContain(leak);
+  });
+
+  it("still produces the result when the clipboard is unavailable", async () => {
+    // jsdom has no clipboard, and neither do some real browsers on http origins.
+    const original = navigator.clipboard;
+    Object.defineProperty(navigator, "clipboard", { value: undefined, configurable: true });
+    try {
+      const { root } = await mount();
+      const button = [...root.querySelectorAll("button")].find(
+        (node) => node.textContent === "Copy today's result",
+      );
+      button.click();
+      await flush();
+      // Degrades to a visible, selectable result instead of throwing.
+      expect(root.querySelector(".share .result").textContent).toContain("Community Games");
+    } finally {
+      Object.defineProperty(navigator, "clipboard", { value: original, configurable: true });
+    }
+  });
+
+  it("keeps playing when storage is blocked, as in private browsing", async () => {
+    const hostile = {
+      getItem: () => {
+        throw new Error("denied");
+      },
+      setItem: () => {
+        throw new Error("quota");
+      },
+    };
+    const { root, getState } = await mount({ storage: hostile });
+    const round = challenge.roundFor(periodFor(challenge));
+    const solution = challenge.solve(round);
+
+    tab(root, challenge.meta.title);
+    solution.numbers.forEach((value, index) => setField(root, `n${index}`, value));
+    solution.ops.forEach((value, index) => setField(root, `op${index}`, value));
+    await submitForm(root);
+
+    // The day is still scored in memory even though nothing could be persisted.
+    expect(getState().ledger.points).toBe(challenge.meta.maxPoints);
+    expect(root.textContent).toContain("Recorded");
   });
 });

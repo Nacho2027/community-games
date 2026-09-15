@@ -16,7 +16,7 @@ Five daily games that run as one codebase and one shared rules engine.
 
 ```bash
 npm install
-npm run verify     # 157 tests, then a production build into dist/
+npm run verify     # 162 tests, then a production build into dist/
 npm run dev        # play locally
 ```
 
