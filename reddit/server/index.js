@@ -4,7 +4,7 @@
 // one-attempt-per-day rule all come from src/server/api.js -> src/games/index.js play().
 import { createServer, getServerPort, reddit, redis } from "@devvit/web/server";
 import { createApi } from "../../src/server/api.js";
-import { createLedger } from "../../src/engine/actions.js";
+import { createLedger } from "../../src/engine/progress.js";
 
 const LEDGER_PREFIX = "ledger";
 

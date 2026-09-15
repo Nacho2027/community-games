@@ -1,4 +1,5 @@
 import { dayKey } from "./period.js";
+import { keyFor } from "./progress.js";
 
 // Streaks and share text are the retention and acquisition loop. Reddit's developer
 // payouts are engagement-based, so returning players are the actual money mechanism.
@@ -36,8 +37,10 @@ export function shareText(ledger, games, today = new Date()) {
   const lines = [`Community Games ${date}`];
   let total = 0;
   for (const game of games) {
-    const entry = ledger.actions?.[`${game.meta.id}:${date}`];
-    const points = entry?.points ?? null;
+    // Read the current progress ledger, not the retired `actions` map: reading the old
+    // shape silently reported every game as "not played" with a total of 0.
+    const entry = ledger?.progress?.[keyFor(game.meta.id, date)];
+    const points = entry?.finished ? entry.points : null;
     if (points === null) lines.push(`${game.meta.title} - not played`);
     else
       lines.push(

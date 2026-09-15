@@ -4,9 +4,11 @@ export const meta = {
   id: "mystery",
   title: "Daily Mystery",
   description:
-    "Cross-reference every alibi, then name the one suspect the evidence cannot rule out.",
+    "Cross-reference every alibi, then name the suspect the evidence cannot rule out.",
   cadence: "daily",
-  maxPoints: 15,
+  mode: "solve",
+  maxAttempts: 3,
+  maxPoints: 100,
 };
 
 const NAMES = [
@@ -100,10 +102,13 @@ const ATMOSPHERE = [
   "The longcase clock in the hall had stopped a few minutes before one.",
 ];
 
+function isPlainObject(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function isRound(value) {
   return (
-    typeof value === "object" &&
-    value !== null &&
+    isPlainObject(value) &&
     typeof value.seed === "string" &&
     Array.isArray(value.suspects) &&
     value.suspects.length > 1 &&
@@ -121,13 +126,7 @@ function isRound(value) {
 }
 
 function reject(reason) {
-  return {
-    accepted: false,
-    points: 0,
-    result: { correct: false, suspectId: null, culpritId: null },
-    reveal: { message: reason },
-    reason,
-  };
+  return { accepted: false, reason, correct: false };
 }
 
 // Deterministic case. Every suspect holds a distinct whereabouts and a distinct item, so a
@@ -206,14 +205,19 @@ export function solve(round) {
   return rebuilt.suspects[culpritIndex]?.id ?? null;
 }
 
-export function submit(round, action) {
-  if (!isRound(round)) return reject("Round data is unavailable.");
+// Judge one accusation.
+//
+// A wrong accusation no longer ends the day: it clears that suspect, and the player has
+// three accusations to work with. With four suspects and three attempts the case cannot
+// be brute forced, so the deduction still has to be done.
+export function judge(round, action, context) {
+  if (!isRound(round)) return reject("Today's case could not be loaded.");
 
-  const suspectId =
-    typeof action?.suspectId === "string" ? action.suspectId : undefined;
-  const accused = suspectId
-    ? round.suspects.find((suspect) => suspect.id === suspectId)
-    : undefined;
+  const suspectId = isPlainObject(action) ? action.suspectId : undefined;
+  const accused =
+    typeof suspectId === "string"
+      ? round.suspects.find((suspect) => suspect.id === suspectId)
+      : undefined;
   if (!accused) return reject("Choose one of the listed suspects.");
 
   // Derive the culprit from the published evidence rather than trusting the round object.
@@ -221,21 +225,39 @@ export function submit(round, action) {
   const remaining = round.suspects.filter(
     (suspect) => !excluded.has(suspect.id),
   );
-  if (remaining.length !== 1) return reject("This case is not solvable today.");
+  if (remaining.length !== 1) return reject("Today's case is not solvable.");
 
   const culprit = remaining[0];
   const correct = accused.id === culprit.id;
-  const points = correct ? meta.maxPoints : 0;
+
+  const attemptsLeft = Math.max(
+    0,
+    (Number.isInteger(context?.maxAttempts)
+      ? context.maxAttempts
+      : meta.maxAttempts) -
+      (Number.isInteger(context?.attempt) ? context.attempt : 1),
+  );
 
   return {
     accepted: true,
-    points,
-    result: { correct, suspectId: accused.id, culpritId: culprit.id },
+    correct,
+    feedback: {
+      label: accused.name,
+      state: correct ? "correct" : "wrong",
+      detail: correct
+        ? "The evidence fits."
+        : `The evidence clears ${accused.name}.` +
+          (attemptsLeft > 0
+            ? ` ${attemptsLeft} accusation${attemptsLeft === 1 ? "" : "s"} left.`
+            : " No accusations left."),
+    },
     reveal: {
-      message: correct
-        ? `Correct: ${accused.name}. +${points} points.`
-        : `${accused.name} was ruled out by the evidence.`,
+      correct,
+      suspectId: accused.id,
+      culpritId: culprit.id,
       culpritName: culprit.name,
+      // Drives the UI's elimination board without re-deriving the deduction client-side.
+      cleared: [...excluded],
     },
   };
 }

@@ -1,22 +1,20 @@
-import { rngFor } from "../engine/rng.js";
-import {
-  roundFor as challengeRound,
-  solve as challengeSolve,
-} from "./challenge.js";
+import { rngFor, shuffle } from "../engine/rng.js";
+import { roundFor as numbersRound, solve as numbersSolve } from "./challenge.js";
 
 export const meta = {
   id: "prediction",
   title: "Prediction League",
-  description:
-    "Forecast today's Numbers puzzle before you solve it, and record your confidence.",
+  description: "Three forecasts about today's Numbers puzzle, each with your confidence.",
   cadence: "daily",
+  mode: "series",
+  maxAttempts: 3,
   maxPoints: 100,
 };
 
 // Every question is a real, verifiable fact about today's Numbers puzzle that cannot be
-// answered by looking at the board: you have to work out the solution. Resolving these by
-// coin flip made the game pure luck, with no skill and nothing to learn.
-const TEMPLATES = [
+// read off the board: you have to work out the solution. Resolving these by coin flip made
+// the original game pure luck with nothing to learn.
+export const TEMPLATES = [
   {
     id: "multiply",
     question: "Will today's Numbers solution use multiplication?",
@@ -31,31 +29,27 @@ const TEMPLATES = [
   },
   {
     id: "largest",
-    question:
-      "Will today's Numbers solution use the largest number in the pool?",
+    question: "Will the solution use the largest number in the pool?",
     metric: "today's solution",
-    test: (round, solution) =>
-      Math.max(...round.pool) === Math.max(...solution.numbers),
+    test: (round, solution) => Math.max(...round.pool) === Math.max(...solution.numbers),
   },
   {
     id: "aboveTarget",
-    question:
-      "Will the three numbers in today's solution sum to more than the target?",
+    question: "Will the three solution numbers sum to more than the target?",
     metric: "today's solution",
     test: (round, solution) =>
       solution.numbers.reduce((sum, value) => sum + value, 0) > round.target,
   },
   {
     id: "evenCount",
-    question: "Will today's solution use more even numbers than odd ones?",
+    question: "Will the solution use more even numbers than odd ones?",
     metric: "today's solution",
     test: (_round, solution) =>
       solution.numbers.filter((value) => value % 2 === 0).length >= 2,
   },
   {
     id: "product",
-    question:
-      "Will the plain sum of today's three solution numbers be an even number?",
+    question: "Will the plain sum of the three solution numbers be even?",
     metric: "today's solution",
     test: (_round, solution) =>
       solution.numbers.reduce((sum, value) => sum + value, 0) % 2 === 0,
@@ -70,27 +64,33 @@ const OPTIONS = [
 const MIN_CONFIDENCE = 50;
 const MAX_CONFIDENCE = 100;
 
-// Proper scoring rule (Brier). Rewarding confidence unconditionally made the slider
-// decorative: expected value rose with confidence no matter what you believed, so
-// always answering 100% was optimal. Scoring against the squared error instead makes
-// honest reporting the best strategy.
-//   expected value of reporting q when you believe p is maximised at q = p
-export function calibrationPoints(confidence, correct) {
-  const stated = confidence / 100;
-  const truth = correct ? 1 : 0;
-  return clampPoints(100 * (1 - (stated - truth) ** 2));
+function isPlainObject(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// Derived from today's Numbers puzzle, so the answer is knowable by reasoning but is not
-// visible on the board. Never exposed by roundFor; only submit() reveals it.
-function outcomeFor(periodKey, templateId) {
-  const template =
-    TEMPLATES.find((item) => item.id === templateId) ?? TEMPLATES[0];
-  const round = challengeRound(periodKey);
-  const solution = challengeSolve(round);
-  if (!solution) return "no";
+function reject(reason) {
+  return { accepted: false, reason, correct: false, feedback: null };
+}
+
+// Proper scoring rule (Brier). Rewarding confidence unconditionally made the slider
+// decorative: expected value rose with confidence no matter what you believed, so always
+// answering 100% was optimal and calibration did not matter at all. Scoring against the
+// squared error instead makes honest reporting the best strategy, and the engine scales
+// the series share by this weight.
+export function calibrationWeight(confidence, correct) {
+  const stated = Math.min(MAX_CONFIDENCE, Math.max(MIN_CONFIDENCE, confidence)) / 100;
+  const truth = correct ? 1 : 0;
+  return Math.max(0, Math.min(1, 1 - (stated - truth) ** 2));
+}
+
+// Derived from today's Numbers puzzle. Knowable by reasoning, never visible on the board.
+export function outcomeFor(periodKey, templateId) {
+  const template = TEMPLATES.find((item) => item.id === templateId) ?? TEMPLATES[0];
   try {
-    return template.test(round, solution) ? "yes" : "no";
+    const puzzle = numbersRound(periodKey);
+    const solution = numbersSolve(puzzle);
+    if (!solution) return "no";
+    return template.test(puzzle, solution) ? "yes" : "no";
   } catch {
     return "no";
   }
@@ -98,59 +98,58 @@ function outcomeFor(periodKey, templateId) {
 
 export function roundFor(periodKey) {
   const key = String(periodKey);
-  const index = Math.floor(rngFor(`prediction:${key}`)() * TEMPLATES.length);
-  const template = TEMPLATES[index] ?? TEMPLATES[0];
+  const rng = rngFor(`prediction:${key}`);
+  const questions = shuffle(rng, TEMPLATES)
+    .slice(0, meta.maxAttempts)
+    .map((template, index) => ({
+      id: `q${index}`,
+      templateId: template.id,
+      question: template.question,
+      metric: template.metric,
+      options: OPTIONS.map((option) => ({ ...option })),
+    }));
+
+  return { periodKey: key, questions };
+}
+
+export function judge(round, action, context) {
+  const periodKey = typeof round?.periodKey === "string" ? round.periodKey : null;
+  if (!periodKey) return reject("Today's questions are unavailable.");
+
+  const attempt = Number.isInteger(context?.attempt) ? context.attempt : 1;
+  const question = Array.isArray(round?.questions) ? round.questions[attempt - 1] : null;
+  if (!question) return reject("That question is not part of today's round.");
+
+  if (!isPlainObject(action)) return reject("Choose an outcome and a confidence.");
+
+  const { pick, confidence } = action;
+  if (pick !== "yes" && pick !== "no") return reject("Pick yes or no.");
+  if (!Number.isInteger(confidence) || confidence < MIN_CONFIDENCE || confidence > MAX_CONFIDENCE)
+    return reject(`Confidence must be a whole number from ${MIN_CONFIDENCE} to ${MAX_CONFIDENCE}.`);
+
+  const outcome = outcomeFor(periodKey, question.templateId);
+  const correct = pick === outcome;
+  const weight = calibrationWeight(confidence, correct);
+  const readout = `${pick === "yes" ? "Yes" : "No"} at ${confidence}%`;
+
   return {
-    periodKey: key,
-    templateId: template.id,
-    question: template.question,
-    metric: template.metric,
-    options: OPTIONS.map((option) => ({ ...option })),
+    accepted: true,
+    correct,
+    weight,
+    feedback: {
+      label: readout,
+      state: correct ? "correct" : "wrong",
+      detail: correct
+        ? `Right. You called ${confidence}% and it held.`
+        : `Wrong. It was ${outcome}.`,
+    },
+    reveal: {
+      questionId: question.id,
+      templateId: question.templateId,
+      outcome,
+      correct,
+      confidence,
+      weight,
+    },
   };
-}
-
-function reject(reason) {
-  return { accepted: false, points: 0, result: {}, reveal: { reason }, reason };
-}
-
-function clampPoints(points) {
-  if (!Number.isFinite(points)) return 0;
-  return Math.min(meta.maxPoints, Math.max(0, Math.round(points)));
-}
-
-export function submit(round, action) {
-  try {
-    const periodKey =
-      typeof round?.periodKey === "string" ? round.periodKey : null;
-    if (!periodKey) return reject("invalid-round");
-    if (!action || typeof action !== "object")
-      return reject("malformed-action");
-
-    const { pick, confidence } = action;
-    if (pick !== "yes" && pick !== "no") return reject("pick");
-    if (!Number.isInteger(confidence)) return reject("confidence");
-    if (confidence < MIN_CONFIDENCE || confidence > MAX_CONFIDENCE)
-      return reject("confidence");
-
-    const outcome = outcomeFor(periodKey, round.templateId);
-    const correct = pick === outcome;
-    const points = calibrationPoints(confidence, correct);
-
-    return {
-      accepted: true,
-      points,
-      result: { correct, outcome, confidence },
-      reveal: {
-        outcome,
-        correct,
-        confidence,
-        templateId: round.templateId ?? null,
-        message: correct
-          ? `You said ${confidence}% and were right: ${points} points.`
-          : `You said ${confidence}% and were wrong: ${points} points.`,
-      },
-    };
-  } catch {
-    return reject("exception");
-  }
 }

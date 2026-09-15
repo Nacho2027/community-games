@@ -3,7 +3,7 @@
 // Discord Activities run in an iframe and share the host machine's resources, so the
 // client stays a thin renderer. Entitlements must be checked here, never in the client.
 import { createApi } from "../../src/server/api.js";
-import { createLedger } from "../../src/engine/actions.js";
+import { createLedger } from "../../src/engine/progress.js";
 
 // Replace with durable storage (Postgres/Redis) before production. This in-memory map
 // exists so the activity is runnable in development without extra infrastructure.

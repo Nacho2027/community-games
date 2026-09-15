@@ -1,13 +1,13 @@
 import { createState, loadState, saveState } from "../state.js";
-import { play } from "../games/index.js";
+import { guess } from "../games/index.js";
 
 // Adapter seam. The UI only ever calls load/save/submit; it never computes a score.
 //
-//   load()                -> Promise<state>
-//   save(state)           -> Promise<boolean>
+//   load()                 -> Promise<state>
+//   save(state)            -> Promise<boolean>
 //   submit(gameId, action) -> Promise<outcome>
 //
-// Local play still routes through the shared play() entry point, so the browser and the
+// Local play still routes through the shared guess() entry point, so the browser and the
 // hosted platforms run identical rules. Remote adapters forward the raw action and let the
 // server decide.
 
@@ -25,7 +25,7 @@ export function createLocalAdapter({ storage = globalThis.localStorage } = {}) {
       return saveState(state, storage);
     },
     async submit(gameId, action) {
-      const outcome = play(state.ledger, gameId, action);
+      const outcome = guess(state.ledger, gameId, action);
       if (outcome.accepted) {
         state = createState({ ...state, ledger: outcome.state });
         saveState(state, storage);
@@ -79,8 +79,12 @@ export function createHttpAdapter({
           accepted: Boolean(outcome?.accepted),
           reason: outcome?.reason ?? null,
           duplicate: Boolean(outcome?.duplicate),
+          correct: Boolean(outcome?.correct),
+          finished: Boolean(outcome?.finished),
           points: Number(outcome?.points) || 0,
-          result: outcome?.result ?? null,
+          attemptsUsed: Number(outcome?.attemptsUsed) || 0,
+          attemptsLeft: Number(outcome?.attemptsLeft) || 0,
+          feedback: outcome?.feedback ?? null,
           reveal: outcome?.reveal ?? null,
           state: state.ledger,
         };
@@ -89,8 +93,12 @@ export function createHttpAdapter({
           accepted: false,
           reason: `network:${error.message}`,
           duplicate: false,
+          correct: false,
+          finished: false,
           points: 0,
-          result: null,
+          attemptsUsed: 0,
+          attemptsLeft: 0,
+          feedback: null,
           reveal: null,
           state: state.ledger,
         };

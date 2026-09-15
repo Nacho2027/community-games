@@ -1,17 +1,38 @@
 import { describe, expect, it } from "vitest";
+import { createLedger, keyFor } from "../src/engine/progress.js";
 import {
   createState,
   loadState,
   saveState,
   STORAGE_KEY,
 } from "../src/state.js";
-import { createLedger } from "../src/engine/actions.js";
 
 function storage(seed = {}) {
   const data = new Map(Object.entries(seed));
   return {
     getItem: (key) => data.get(key) ?? null,
     setItem: (key, value) => data.set(key, String(value)),
+    raw: () => data.get(STORAGE_KEY),
+  };
+}
+
+function guess(label = "6 * 6 - 6 = 30") {
+  return {
+    label,
+    state: "correct",
+    detail: "Exactly on target.",
+    at: "2026-03-04T00:00:00.000Z",
+  };
+}
+
+function entry(gameId, periodKey, points) {
+  return {
+    gameId,
+    periodKey,
+    guesses: [guess()],
+    solved: true,
+    finished: true,
+    points,
   };
 }
 
@@ -21,34 +42,28 @@ describe("state", () => {
     expect(state.player.id).toBeTruthy();
     expect(state.ledger.points).toBe(0);
     expect(state.ledger.history).toEqual([]);
+    expect(state.ledger.progress).toEqual({});
   });
 
   it("round trips through storage", () => {
     const store = storage();
     const state = createState({
       player: { id: "p1", name: "Ada" },
-      ledger: {
-        actions: {
-          "challenge:2026-01-01": {
-            gameId: "challenge",
-            periodKey: "2026-01-01",
-            points: 10,
-            at: "2026-01-01T00:00:00.000Z",
-          },
+      ledger: createLedger({
+        progress: {
+          [keyFor("challenge", "2026-03-04")]: entry(
+            "challenge",
+            "2026-03-04",
+            100,
+          ),
         },
-        history: [
-          {
-            gameId: "challenge",
-            periodKey: "2026-01-01",
-            points: 10,
-            at: "2026-01-01T00:00:00.000Z",
-          },
-        ],
-      },
+        history: [entry("challenge", "2026-03-04", 100)],
+      }),
     });
+
     saveState(state, store);
     expect(loadState(store)).toEqual(state);
-    expect(store.getItem(STORAGE_KEY)).toContain("challenge");
+    expect(store.raw()).toContain("challenge");
   });
 
   it("recovers from malformed JSON", () => {
@@ -61,30 +76,70 @@ describe("state", () => {
     const tampered = JSON.stringify({
       player: { id: 42, name: null },
       ledger: {
-        actions: {
-          bad: { gameId: 1 },
-          "challenge:2026-01-01": {
+        // A stored total is never trusted: points are recomputed from history below.
+        points: 99999,
+        progress: {
+          [keyFor("challenge", "2026-03-04")]: {
             gameId: "challenge",
-            periodKey: "2026-01-01",
+            periodKey: "2026-03-04",
             points: "9999",
-            at: null,
+            guesses: "nope",
+            solved: "yes",
+            finished: 1,
           },
+          // Key does not match gameId:periodKey, so it cannot be trusted as that period.
+          "mismatched-key": {
+            gameId: "challenge",
+            periodKey: "2026-03-04",
+            points: 50,
+          },
+          bad: { gameId: 1 },
         },
         history: [
-          { gameId: "challenge", periodKey: "2026-01-01", points: "5" },
+          {
+            gameId: "challenge",
+            periodKey: "2026-03-04",
+            points: "5",
+            guesses: null,
+          },
           null,
           "nope",
+          42,
         ],
-        points: "abc",
       },
     });
+
     const state = loadState(storage({ [STORAGE_KEY]: tampered }));
+
     expect(state.player.id).toBe("local-player");
-    expect(state.ledger.actions.bad).toBeUndefined();
-    expect(state.ledger.actions["challenge:2026-01-01"].points).toBe(9999);
-    expect(state.ledger.history).toHaveLength(1);
-    // Points are always recomputed from history, never trusted from storage.
+    expect(state.player.name).toBe("Player");
     expect(state.ledger.points).toBe(5);
+    expect(state.ledger.history).toHaveLength(1);
+
+    const safe = state.ledger.progress[keyFor("challenge", "2026-03-04")];
+    expect(safe.points).toBe(9999);
+    expect(safe.guesses).toEqual([]);
+    expect(safe.attemptsUsed).toBe(0);
+    expect(safe.solved).toBe(false);
+    expect(safe.finished).toBe(false);
+
+    expect(state.ledger.progress["mismatched-key"]).toBeUndefined();
+    expect(state.ledger.progress.bad).toBeUndefined();
+  });
+
+  it("ignores a stored points number and recomputes it from history", () => {
+    const store = storage({
+      [STORAGE_KEY]: JSON.stringify({
+        ledger: {
+          points: 99999,
+          history: [
+            { gameId: "challenge", periodKey: "2026-03-04", points: 40 },
+            { gameId: "mystery", periodKey: "2026-03-04", points: 60 },
+          ],
+        },
+      }),
+    });
+    expect(loadState(store).ledger.points).toBe(100);
   });
 
   it("caps restored history at 200 entries", () => {
@@ -92,7 +147,6 @@ describe("state", () => {
       gameId: "challenge",
       periodKey: `2026-01-${index}`,
       points: 1,
-      at: "2026-01-01T00:00:00.000Z",
     }));
     const state = loadState(
       storage({ [STORAGE_KEY]: JSON.stringify({ ledger: { history } }) }),
@@ -121,7 +175,14 @@ describe("state", () => {
 
   it("keeps a valid ledger intact", () => {
     const state = createState({ ledger: createLedger() });
-    expect(state.ledger.actions).toEqual({});
+    expect(state.ledger.progress).toEqual({});
     expect(state.ledger.history).toEqual([]);
+    expect(state.ledger.points).toBe(0);
+  });
+
+  it("does not share ledger objects between two created states", () => {
+    const first = createState();
+    first.ledger.history.push(entry("challenge", "2026-03-04", 10));
+    expect(createState().ledger.history).toEqual([]);
   });
 });

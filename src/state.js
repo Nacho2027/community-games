@@ -1,66 +1,30 @@
-import { createLedger } from "./engine/actions.js";
+import { createLedger } from "./engine/progress.js";
 
-const STORAGE_KEY = "community-games-lab:v2";
+// Bumped to v3: the ledger used to be an `actions` map keyed by game and period. It is now
+// a `progress` map of attempt entries, so v2 data is not readable and must not be trusted.
+const STORAGE_KEY = "community-games-lab:v3";
 
-const DEFAULT_STATE = {
-  player: { id: "local-player", name: "Player" },
-  ledger: createLedger(),
-};
+const DEFAULT_PLAYER = { id: "local-player", name: "Player" };
 
 function isPlainObject(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function finiteInt(value, fallback = 0) {
-  const number = Number(value);
-  return Number.isFinite(number) ? Math.trunc(number) : fallback;
+function text(value, fallback) {
+  return typeof value === "string" && value ? value : fallback;
 }
 
-function sanitizeEntry(entry) {
-  if (!isPlainObject(entry)) return null;
-  const gameId = typeof entry.gameId === "string" ? entry.gameId : null;
-  const periodKey =
-    typeof entry.periodKey === "string" ? entry.periodKey : null;
-  if (!gameId || !periodKey) return null;
-  return {
-    gameId,
-    periodKey,
-    points: finiteInt(entry.points),
-    at: typeof entry.at === "string" ? entry.at : new Date(0).toISOString(),
-  };
-}
-
-function sanitizeLedger(value) {
-  const source = isPlainObject(value) ? value : {};
-  const ledger = createLedger();
-  const actions = isPlainObject(source.actions) ? source.actions : {};
-  for (const [key, entry] of Object.entries(actions)) {
-    const safe = sanitizeEntry(entry);
-    if (safe) ledger.actions[key] = safe;
-  }
-  ledger.history = (Array.isArray(source.history) ? source.history : [])
-    .map(sanitizeEntry)
-    .filter(Boolean)
-    .slice(0, 200);
-  ledger.points = ledger.history.reduce((sum, entry) => sum + entry.points, 0);
-  return ledger;
-}
-
+// createLedger already validates every entry, coerces hostile values, caps history, and
+// recomputes points from scratch, so stored data is never trusted as-is.
 export function createState(initial = {}) {
   const source = isPlainObject(initial) ? initial : {};
   const player = isPlainObject(source.player) ? source.player : {};
   return {
     player: {
-      id:
-        typeof player.id === "string" && player.id
-          ? player.id
-          : DEFAULT_STATE.player.id,
-      name:
-        typeof player.name === "string" && player.name
-          ? player.name
-          : DEFAULT_STATE.player.name,
+      id: text(player.id, DEFAULT_PLAYER.id),
+      name: text(player.name, DEFAULT_PLAYER.name),
     },
-    ledger: sanitizeLedger(source.ledger),
+    ledger: createLedger(source.ledger),
   };
 }
 

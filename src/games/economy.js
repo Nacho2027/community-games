@@ -3,9 +3,12 @@ import { intBetween, rngFor } from "../engine/rng.js";
 export const meta = {
   id: "economy",
   title: "Community Market",
-  description: "Trade three goods through one volatile market day.",
+  description:
+    "Plan one day of trades to clear as much profit as the market allows.",
   cadence: "daily",
-  maxPoints: 20,
+  mode: "solve",
+  maxAttempts: 3,
+  maxPoints: 100,
 };
 
 const GOODS = [
@@ -17,17 +20,16 @@ const GOODS = [
 const TRENDS = ["busy", "steady", "quiet"];
 const STARTING_COINS = 30;
 // Capacity is how many units you can HOLD at once, not how many you may trade.
-// Counting both legs made the best possible day worth only 8 points out of 40.
 const CAPACITY = 5;
-// Best case is CAPACITY units at the largest spread, which is 4 coins a unit.
-const MAX_POINTS = CAPACITY * 4;
+const CLOSE_RATIO = 0.7;
+const LABEL_LIMIT = 60;
 
 function isPlainObject(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function reject(reason) {
-  return { accepted: false, points: 0, result: {}, reveal: {}, reason };
+  return { accepted: false, reason, correct: false, feedback: null };
 }
 
 export function roundFor(periodKey) {
@@ -42,9 +44,7 @@ export function roundFor(periodKey) {
 }
 
 function readLegs(list, priceOf, label) {
-  // Both sides must be present and well-formed; a no-op is expressed as an empty array.
-  if (list === undefined || list === null)
-    return { legs: [], reason: `${label} must be an array` };
+  // Both sides must be present and well-formed; a no-op is an empty array.
   if (!Array.isArray(list))
     return { legs: [], reason: `${label} must be an array` };
   const legs = [];
@@ -53,14 +53,13 @@ function readLegs(list, priceOf, label) {
       return { legs: [], reason: `${label} entries must be objects` };
     const price = priceOf(entry.goodId);
     if (price === undefined)
-      return { legs: [], reason: `unknown good: ${entry.goodId}` };
-    const qty = Number(entry.qty);
-    if (!Number.isInteger(qty) || qty < 0)
-      return {
-        legs: [],
-        reason: `${label} qty must be a non-negative integer`,
-      };
-    legs.push({ goodId: entry.goodId, qty, price });
+      return { legs: [], reason: `There is no good called "${entry.goodId}".` };
+    // Strict integer, deliberately not Number(): coercion would accept `true` as 1 unit
+    // and `null` as 0, which are exactly the kind of silent surprises a trading rule
+    // should reject outright.
+    if (!Number.isInteger(entry.qty) || entry.qty < 0)
+      return { legs: [], reason: `${label} quantities must be whole numbers.` };
+    legs.push({ goodId: entry.goodId, qty: entry.qty, price });
   }
   return { legs, reason: null };
 }
@@ -69,81 +68,25 @@ function totalQty(legs) {
   return legs.reduce((sum, leg) => sum + leg.qty, 0);
 }
 
-export function submit(round, action) {
-  if (!isPlainObject(round) || !Array.isArray(round.goods))
-    return reject("invalid round");
-  if (!isPlainObject(action)) return reject("action must be an object");
+// Short readable summary for the guess history in the UI.
+function describeLegs(buys, sells, goods) {
+  const nameOf = (id) =>
+    (goods.find((good) => good.id === id)?.name ?? id).toLowerCase();
+  const parts = [];
+  for (const leg of buys)
+    if (leg.qty > 0) parts.push(`buy ${leg.qty} ${nameOf(leg.goodId)}`);
+  for (const leg of sells)
+    if (leg.qty > 0) parts.push(`sell ${leg.qty} ${nameOf(leg.goodId)}`);
+  if (parts.length === 0) return "no trades";
 
-  const buyPrice = (goodId) =>
-    round.goods.find((good) => good.id === goodId)?.buy;
-  const sellPrice = (goodId) =>
-    round.goods.find((good) => good.id === goodId)?.sell;
-
-  const buys = readLegs(action.buy, buyPrice, "buy");
-  if (buys.reason) return reject(buys.reason);
-  const sells = readLegs(action.sell, sellPrice, "sell");
-  if (sells.reason) return reject(sells.reason);
-
-  const capacity = Number.isInteger(round.capacity) ? round.capacity : CAPACITY;
-  const coins = Number.isInteger(round.startingCoins)
-    ? round.startingCoins
-    : STARTING_COINS;
-
-  if (totalQty(buys.legs) > capacity)
-    return reject(
-      `cannot hold ${totalQty(buys.legs)} units, capacity is ${capacity}`,
-    );
-
-  const totalBuyCost = buys.legs.reduce(
-    (sum, leg) => sum + leg.qty * leg.price,
-    0,
-  );
-  if (totalBuyCost > coins)
-    return reject(
-      `total buy cost ${totalBuyCost} exceeds ${coins} starting coins`,
-    );
-
-  const boughtByGood = new Map();
-  for (const leg of buys.legs)
-    boughtByGood.set(leg.goodId, (boughtByGood.get(leg.goodId) ?? 0) + leg.qty);
-  const soldByGood = new Map();
-  for (const leg of sells.legs)
-    soldByGood.set(leg.goodId, (soldByGood.get(leg.goodId) ?? 0) + leg.qty);
-  for (const [goodId, qty] of soldByGood) {
-    if (qty > (boughtByGood.get(goodId) ?? 0))
-      return reject(`cannot sell ${qty} ${goodId} without buying it first`);
-  }
-
-  const totalSellRevenue = sells.legs.reduce(
-    (sum, leg) => sum + leg.qty * leg.price,
-    0,
-  );
-  const profit = totalSellRevenue - totalBuyCost;
-  const points = Math.max(0, Math.min(MAX_POINTS, Math.round(profit)));
-  const finalCoins = coins - totalBuyCost + totalSellRevenue;
-  const trades = [
-    ...buys.legs.map((leg) => ({ side: "buy", ...leg })),
-    ...sells.legs.map((leg) => ({ side: "sell", ...leg })),
-  ];
-
-  return {
-    accepted: true,
-    points,
-    result: { finalCoins, profit, trades, goods: round.goods },
-    reveal: {
-      profit,
-      points,
-      summary:
-        profit > 0
-          ? `You cleared ${profit} coins of profit and finished with ${finalCoins}.`
-          : `You finished with ${finalCoins} coins and no profit.`,
-    },
-  };
+  const label = parts.join(", ");
+  if (label.length <= LABEL_LIMIT) return label;
+  return `${totalQty(buys)} bought, ${totalQty(sells)} sold`;
 }
 
-// Optimal play, used by tests to prove the ceiling is actually reachable.
-// Margins are linear and capacity is shared, so concentrating on the best
-// affordable spread is optimal.
+// Optimal play, and the target the player is scored against.
+// Margins are linear and capacity is shared, so concentrating the whole position on the
+// best affordable spread is optimal.
 export function bestAction(round) {
   if (!isPlainObject(round) || !Array.isArray(round.goods))
     return { buy: [], sell: [] };
@@ -151,18 +94,136 @@ export function bestAction(round) {
   const coins = Number.isInteger(round.startingCoins)
     ? round.startingCoins
     : STARTING_COINS;
-  let best = { buy: [], sell: [], profit: 0 };
+
+  let best = { action: { buy: [], sell: [] }, profit: 0 };
   for (const good of round.goods) {
     const margin = good.sell - good.buy;
     if (margin <= 0) continue;
     const qty = Math.min(capacity, Math.floor(coins / good.buy));
+    if (qty <= 0) continue;
     const profit = qty * margin;
     if (profit > best.profit)
       best = {
-        buy: [{ goodId: good.id, qty }],
-        sell: [{ goodId: good.id, qty }],
+        action: {
+          buy: [{ goodId: good.id, qty }],
+          sell: [{ goodId: good.id, qty }],
+        },
         profit,
       };
   }
-  return { buy: best.buy, sell: best.sell };
+  return best.action;
+}
+
+export function bestProfit(round) {
+  const action = bestAction(round);
+  const buys = action.buy ?? [];
+  const profit = (action.sell ?? []).reduce((sum, leg) => {
+    const good = round.goods.find((item) => item.id === leg.goodId);
+    const cost = buys.find((item) => item.goodId === leg.goodId);
+    if (!good || !cost) return sum;
+    return sum + leg.qty * (good.sell - good.buy);
+  }, 0);
+  return profit;
+}
+
+// Judge a single trading day. The player is not guessing at a hidden answer: the target is
+// how much profit the market actually allows, so the feedback can say exactly how far off
+// they were and what to do about it.
+export function judge(round, action, context) {
+  try {
+    if (!isPlainObject(round) || !Array.isArray(round.goods))
+      return reject("The market data is unavailable.");
+    if (!isPlainObject(action)) return reject("Send buy and sell lists.");
+
+    const buyPrice = (goodId) =>
+      round.goods.find((good) => good.id === goodId)?.buy;
+    const sellPrice = (goodId) =>
+      round.goods.find((good) => good.id === goodId)?.sell;
+
+    const buys = readLegs(action.buy, buyPrice, "Buy");
+    if (buys.reason) return reject(buys.reason);
+    const sells = readLegs(action.sell, sellPrice, "Sell");
+    if (sells.reason) return reject(sells.reason);
+
+    const capacity = Number.isInteger(round.capacity)
+      ? round.capacity
+      : CAPACITY;
+    const coins = Number.isInteger(round.startingCoins)
+      ? round.startingCoins
+      : STARTING_COINS;
+
+    const held = totalQty(buys.legs);
+    if (held > capacity)
+      return reject(
+        `You can only hold ${capacity} units, and that plan holds ${held}.`,
+      );
+
+    const buyCost = buys.legs.reduce(
+      (sum, leg) => sum + leg.qty * leg.price,
+      0,
+    );
+    if (buyCost > coins)
+      return reject(
+        `That plan costs ${buyCost} coins and you only have ${coins}.`,
+      );
+
+    const boughtByGood = new Map();
+    for (const leg of buys.legs)
+      boughtByGood.set(
+        leg.goodId,
+        (boughtByGood.get(leg.goodId) ?? 0) + leg.qty,
+      );
+
+    for (const leg of sells.legs) {
+      const available = boughtByGood.get(leg.goodId) ?? 0;
+      if (leg.qty > available)
+        return reject(
+          `You cannot sell ${leg.qty} ${leg.goodId} without buying it first.`,
+        );
+    }
+
+    const sellRevenue = sells.legs.reduce(
+      (sum, leg) => sum + leg.qty * leg.price,
+      0,
+    );
+    const profit = sellRevenue - buyCost;
+    const best = bestProfit(round);
+    const correct = profit === best && best > 0;
+    const shortfall = best - profit;
+
+    const state = correct
+      ? "correct"
+      : profit >= best * CLOSE_RATIO
+        ? "close"
+        : "wrong";
+    const detail =
+      best > 0
+        ? correct
+          ? `You cleared ${profit} coins. That is the best this market allows.`
+          : `You cleared ${profit}. The best plan clears ${best}: ${shortfall} short of optimal.`
+        : `You cleared ${profit} coins.`;
+
+    return {
+      accepted: true,
+      correct,
+      feedback: {
+        label: describeLegs(buys.legs, sells.legs, round.goods),
+        state,
+        detail,
+      },
+      reveal: {
+        profit,
+        best,
+        shortfall,
+        finalCoins: coins - buyCost + sellRevenue,
+        trades: [
+          ...buys.legs.map((leg) => ({ side: "buy", ...leg })),
+          ...sells.legs.map((leg) => ({ side: "sell", ...leg })),
+        ],
+        attempt: context?.attempt ?? 1,
+      },
+    };
+  } catch {
+    return reject("That plan could not be read.");
+  }
 }

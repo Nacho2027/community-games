@@ -4,10 +4,10 @@ import {
   LOCATIONS,
   clueTarget,
   excludedBy,
+  judge,
   meta,
   roundFor,
   solve,
-  submit,
 } from "../src/games/mystery.js";
 
 function keys(count) {
@@ -28,6 +28,38 @@ function deduce(round) {
   }
   return round.suspects.filter((suspect) => !excluded.has(suspect.id));
 }
+
+const JUNK_ACTIONS = [
+  undefined,
+  null,
+  {},
+  [],
+  "s0",
+  7,
+  true,
+  { suspectId: 7 },
+  { suspectId: null },
+  { suspect: "s0" },
+  { id: "s0" },
+];
+
+describe("mystery meta", () => {
+  it("runs the solve loop with three accusations", () => {
+    expect(meta.id).toBe("mystery");
+    expect(meta.mode).toBe("solve");
+    expect(meta.cadence).toBe("daily");
+    expect(meta.maxAttempts).toBe(3);
+    expect(meta.maxPoints).toBe(100);
+  });
+
+  it("cannot be brute forced", () => {
+    // Four suspects and only three accusations means blind guessing cannot clear the
+    // case. The deduction still has to be done.
+    expect(meta.maxAttempts).toBeLessThan(
+      roundFor("2026-03-04").suspects.length + 1,
+    );
+  });
+});
 
 describe("mystery round content", () => {
   it("is deterministic for a period key", () => {
@@ -53,8 +85,7 @@ describe("mystery round content", () => {
 
   it("never names a suspect in the evidence", () => {
     // Regression: three of four suspects used to be named outright, so the "deduction"
-    // was just spotting the one name that was missing. Every clue now describes a
-    // condition, and the player must connect it to an alibi.
+    // was just spotting the one name that was missing.
     for (const key of keys(400)) {
       const round = roundFor(key);
       for (const clue of round.clues)
@@ -119,58 +150,186 @@ describe("mystery solvability", () => {
   });
 
   it("returns null for a malformed round", () => {
-    for (const bad of [undefined, null, {}, { seed: 5 }, { seed: "x" }]) {
+    for (const bad of [
+      undefined,
+      null,
+      {},
+      { seed: 5 },
+      { seed: "x" },
+      [],
+      "x",
+    ]) {
       expect(solve(bad)).toBeNull();
     }
   });
 });
 
-describe("mystery scoring", () => {
-  it("awards maxPoints for the culprit and nothing otherwise", () => {
-    for (const key of keys(120)) {
+describe("mystery judging", () => {
+  const context = { attempt: 1, maxAttempts: meta.maxAttempts };
+
+  it("accepts the culprit and reports a hit", () => {
+    for (const key of keys(150)) {
       const round = roundFor(key);
       const culprit = solve(round);
-      const right = submit(round, { suspectId: culprit });
-      expect(right.accepted).toBe(true);
-      expect(right.points).toBe(meta.maxPoints);
-      expect(right.result.correct).toBe(true);
+      const verdict = judge(round, { suspectId: culprit }, context);
 
-      for (const suspect of round.suspects.filter(
-        (item) => item.id !== culprit,
+      expect(verdict.accepted).toBe(true);
+      expect(verdict.correct).toBe(true);
+      expect(verdict.feedback.state).toBe("correct");
+      expect(verdict.feedback.detail).toBe("The evidence fits.");
+      expect(verdict.feedback.label).toBe(
+        round.suspects.find((suspect) => suspect.id === culprit).name,
+      );
+    }
+  });
+
+  it("clears the accused on a miss and names them in the detail", () => {
+    for (const key of keys(150)) {
+      const round = roundFor(key);
+      const culprit = solve(round);
+      for (const innocent of round.suspects.filter(
+        (suspect) => suspect.id !== culprit,
       )) {
-        const wrong = submit(round, { suspectId: suspect.id });
-        expect(wrong.accepted).toBe(true);
-        expect(wrong.points).toBe(0);
-        expect(wrong.result.correct).toBe(false);
-        // The reveal may name the culprit only after the accusation.
-        expect(wrong.result.culpritId).toBe(culprit);
+        const verdict = judge(round, { suspectId: innocent.id }, context);
+
+        expect(verdict.accepted).toBe(true);
+        expect(verdict.correct).toBe(false);
+        expect(verdict.feedback.state).toBe("wrong");
+        expect(verdict.feedback.label).toBe(innocent.name);
+        // The hint has to name the suspect the evidence clears so the player can narrow.
+        expect(verdict.feedback.detail).toContain(innocent.name);
+        // It must not betray the answer.
+        expect(verdict.feedback.detail).not.toContain(
+          round.suspects.find((suspect) => suspect.id === culprit).name,
+        );
       }
     }
   });
 
-  it("rejects malformed input without throwing", () => {
+  it("counts down the accusations left in the hint", () => {
     const round = roundFor("2026-03-04");
-    for (const action of [
+    const innocent = round.suspects.find(
+      (suspect) => suspect.id !== solve(round),
+    );
+    const first = judge(
+      round,
+      { suspectId: innocent.id },
+      { attempt: 1, maxAttempts: 3 },
+    );
+    expect(first.feedback.detail).toContain("2 accusations left");
+
+    const last = judge(
+      round,
+      { suspectId: innocent.id },
+      { attempt: 3, maxAttempts: 3 },
+    );
+    expect(last.feedback.detail).toContain("No accusations left");
+  });
+
+  it("always returns a non-empty label", () => {
+    for (const key of keys(60)) {
+      const round = roundFor(key);
+      for (const suspect of round.suspects) {
+        const verdict = judge(round, { suspectId: suspect.id }, context);
+        expect(verdict.feedback.label.length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("reveals the culprit and the cleared set only after a move", () => {
+    const round = roundFor("2026-03-04");
+    const culprit = solve(round);
+    const verdict = judge(round, { suspectId: culprit }, context);
+
+    expect(verdict.reveal.culpritId).toBe(culprit);
+    expect(verdict.reveal.culpritName).toBe(
+      round.suspects.find((suspect) => suspect.id === culprit).name,
+    );
+    expect(verdict.reveal.correct).toBe(true);
+    expect(verdict.reveal.suspectId).toBe(culprit);
+    expect(new Set(verdict.reveal.cleared)).toEqual(excludedBy(round));
+  });
+
+  it("rejects an unknown or missing suspect without throwing", () => {
+    const round = roundFor("2026-03-04");
+    for (const action of JUNK_ACTIONS) {
+      let verdict;
+      expect(
+        () => {
+          verdict = judge(round, action, context);
+        },
+        `threw on ${JSON.stringify(action)}`,
+      ).not.toThrow();
+      expect(verdict.accepted).toBe(false);
+      expect(verdict.correct).toBe(false);
+      expect(typeof verdict.reason).toBe("string");
+      expect(verdict.reason.length).toBeGreaterThan(0);
+      expect(verdict.feedback).toBeUndefined();
+    }
+  });
+
+  it("rejects a malformed round without throwing", () => {
+    const badRounds = [
       undefined,
       null,
       {},
-      { suspectId: "nope" },
-      { suspectId: 7 },
       [],
-    ]) {
-      const verdict = submit(round, action);
+      "x",
+      7,
+      { seed: "x" },
+      { seed: "x", suspects: [] },
+    ];
+    for (const bad of badRounds) {
+      let verdict;
+      expect(() => {
+        verdict = judge(bad, { suspectId: "s0" }, context);
+      }).not.toThrow();
       expect(verdict.accepted).toBe(false);
-      expect(verdict.points).toBe(0);
     }
-    for (const bad of [undefined, null, {}, { seed: "x" }]) {
-      expect(submit(bad, { suspectId: "s0" }).accepted).toBe(false);
+  });
+
+  it("never throws when the context is missing or malformed", () => {
+    const round = roundFor("2026-03-04");
+    const culprit = solve(round);
+    for (const ctx of [
+      undefined,
+      null,
+      {},
+      [],
+      "x",
+      7,
+      { attempt: "x" },
+      { maxAttempts: -1 },
+    ]) {
+      let verdict;
+      expect(() => {
+        verdict = judge(round, { suspectId: culprit }, ctx);
+      }).not.toThrow();
+      expect(verdict.accepted).toBe(true);
+      expect(verdict.correct).toBe(true);
+      expect(verdict.feedback.detail.length).toBeGreaterThan(0);
     }
   });
 
   it("does not mutate the round it is given", () => {
     const round = roundFor("2026-03-04");
     const snapshot = JSON.stringify(round);
-    submit(round, { suspectId: round.suspects[0].id });
+    for (const suspect of round.suspects)
+      judge(round, { suspectId: suspect.id }, context);
     expect(JSON.stringify(round)).toBe(snapshot);
+  });
+
+  it("judges the same move the same way regardless of order", () => {
+    const round = roundFor("2026-02-11");
+    const first = round.suspects.map((suspect) =>
+      JSON.stringify(judge(round, { suspectId: suspect.id }, context)),
+    );
+    const reversed = [...round.suspects]
+      .reverse()
+      .map((suspect) =>
+        JSON.stringify(judge(round, { suspectId: suspect.id }, context)),
+      )
+      .reverse();
+    expect(reversed).toEqual(first);
   });
 });
