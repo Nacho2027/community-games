@@ -3,6 +3,7 @@ import { buildActionForm } from "./actions.js";
 import { describeRound } from "./rounds.js";
 import { registry, periodFor } from "../games/index.js";
 import { pointsFor } from "../engine/actions.js";
+import { dailyStreak, shareText } from "../engine/streak.js";
 
 const TABS = registry.map((game) => game.meta);
 
@@ -18,13 +19,17 @@ export function createShell({ root, getState, submit }) {
 
   function header(state) {
     const total = state.ledger.points;
+    const streak = dailyStreak(state.ledger);
     return el("header", {}, [
       el("h1", { text: "Community Games" }),
       el("p", {
         class: "muted",
         text: "Five daily games. One decision each. Same puzzle for everyone.",
       }),
-      el("p", { class: "score", text: `Points: ${total}` }),
+      el("p", { class: "score" }, [
+        `Points: ${total}`,
+        streak > 1 ? ` \u00b7 ${streak}-day streak` : "",
+      ]),
     ]);
   }
 
@@ -110,9 +115,30 @@ export function createShell({ root, getState, submit }) {
       )),
     ]);
     return el("div", { class: "summary" }, [
-      el("div", {}, [el("h3", { text: "Recent plays" }), list]),
+      el("div", {}, [el("h3", { text: "Recent plays" }), list, shareButton(state)]),
       scoreboard,
     ]);
+  }
+
+  // Sharing is the acquisition loop; the text is spoiler-free by construction.
+  function shareButton(state) {
+    const status = el("span", { class: "muted", text: "" });
+    const button = el("button", {
+      type: "button",
+      text: "Copy today's result",
+      onclick: async () => {
+        const text = shareText(state.ledger, registry);
+        try {
+          await navigator.clipboard.writeText(text);
+          status.textContent = " Copied.";
+        } catch {
+          status.textContent = " Select and copy the text below.";
+        }
+        preview.textContent = text;
+      },
+    });
+    const preview = el("pre", { class: "result" });
+    return el("div", { class: "share" }, [button, status, preview]);
   }
 
   function message(reason) {

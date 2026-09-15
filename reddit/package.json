@@ -9,5 +9,8 @@
   },
   "dependencies": {
     "@devvit/web": "latest"
+  },
+  "devDependencies": {
+    "@devvit/cli": "^0.14.4"
   }
 }
