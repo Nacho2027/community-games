@@ -2,6 +2,8 @@
 
 Five daily games that run as one codebase and one shared rules engine.
 
+**Live: <https://nacho2027.github.io/community-games/>** (auto-deployed from `main` by GitHub Actions)
+
 | Game | Cadence | Max points | Decision |
 | --- | --- | --- | --- |
 | Daily Numbers | daily | 10 | Use three pool numbers and two operators to hit the target |
@@ -14,7 +16,7 @@ Five daily games that run as one codebase and one shared rules engine.
 
 ```bash
 npm install
-npm run verify     # 108 tests, then a production build into dist/
+npm run verify     # 128 tests, then a production build into dist/
 npm run dev        # play locally
 ```
 
@@ -29,6 +31,12 @@ npm run dev        # play locally
 - `src/adapters/index.js` - local and HTTP adapter implementations behind one seam, so the
   browser, Reddit, and Discord all route actions through the same server-authoritative path.
 - `src/ui/` - presentation only. The UI cannot award points.
+
+### Retention and acquisition
+
+- `src/engine/streak.js` tracks consecutive days played and builds a spoiler-free
+  copy-paste result. Engagement-based platform payouts are driven by returning
+  players, so the daily streak is the money mechanism, not decoration.
 
 ### Design invariants
 

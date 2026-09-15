@@ -3,17 +3,23 @@
 Five games ship from this repo. The web build is deployable today; the Reddit and
 Discord packages are prepared and require platform accounts to go live.
 
-## 1. Web (live now, no approvals)
+## 1. Web - DONE, live
+
+**<https://nacho2027.github.io/community-games/>** - five playable games, PWA manifest,
+icon, and share text. Verified serving HTTP 200 for the page, JS bundle, CSS, manifest,
+and icon.
+
+Deployed automatically from `main` by `.github/workflows/deploy.yml`, which runs the full
+test suite before publishing, so a red test can never reach the live site.
 
 ```bash
 npm install
-npm run verify        # tests + production build into dist/
+npm run verify        # 128 tests + production build into dist/
 npm run preview       # serve the built app locally
 ```
 
-Deploy `dist/` to any static host (Cloudflare Pages, Netlify, Vercel, GitHub Pages).
-The app is fully playable with local persistence, so it earns nothing yet but is a
-working demo and landing surface.
+Any static host works (Cloudflare Pages, Netlify, Vercel). GitHub Pages needs no extra
+account because `gh` is already authenticated.
 
 ## 2. Reddit (Devvit) - primary monetization path
 
