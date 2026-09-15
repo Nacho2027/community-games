@@ -36,6 +36,7 @@ try {
 }
 
 const app = document.querySelector("#app");
+const panel = document.querySelector(".panel");
 const report = {
   asset,
   appHasChildren: app.children.length > 0,
@@ -44,10 +45,14 @@ const report = {
   hasCommit: Boolean(document.querySelector(".go")),
   numTiles: document.querySelectorAll(".tile").length,
   hasShare: Boolean(
-    [...document.querySelectorAll("button")].find((n) =>
-      n.textContent.includes("Copy today's result"),
+    [...document.querySelectorAll("button")].find((node) =>
+      node.textContent.includes("Copy all five"),
     ),
   ),
+  // A build with no API has no shared board. It must SAY that, not sit on a spinner
+  // forever waiting for a host that will never answer.
+  soloBoard: Boolean(panel?.textContent.includes("no shared board")),
+  stuckLoading: document.body.textContent.includes("Loading"),
   hasRawJson: document.body.textContent.includes("{"),
 };
 
@@ -58,7 +63,10 @@ if (
   !report.appHasChildren ||
   report.gameChips !== 5 ||
   !report.hasBoard ||
+  !report.hasShare ||
+  !report.soloBoard ||
+  report.stuckLoading ||
   report.hasRawJson
 )
   throw new Error("shipped bundle did not mount correctly");
-console.log("\n  shipped bundle mounts and renders all five games");
+console.log("\n  shipped bundle mounts, renders all five games, and reports its board state");
