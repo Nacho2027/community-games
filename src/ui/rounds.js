@@ -27,23 +27,26 @@ function prediction(round) {
 }
 
 function faction(round) {
-  const totals = {};
-  for (const votes of round.votes ?? [])
-    for (const [id, count] of Object.entries(votes)) totals[id] = (totals[id] ?? 0) + count;
+  const opening = round.openingVotes ?? {};
+  const rows = (round.factions ?? []).map((item) =>
+    el("tr", {}, [
+      el("td", { text: item.name }),
+      el("td", { text: String(opening[item.id] ?? 0) }),
+    ]),
+  );
   return [
-    el("p", { class: "muted", text: `${round.turns ?? 0} turns of crowd votes. Backing a faction adds 5 to its total.` }),
+    el("p", { class: "muted", text: round.rule ?? "" }),
     el("table", {}, [
       el("thead", {}, el("tr", {}, [
         el("th", { text: "Faction" }),
-        el("th", { text: "Crowd votes" }),
+        el("th", { text: "Opening turn" }),
       ])),
-      el("tbody", {}, (round.factions ?? []).map((item) =>
-        el("tr", {}, [
-          el("td", { text: item.name }),
-          el("td", { text: String(totals[item.id] ?? 0) }),
-        ]),
-      )),
+      el("tbody", {}, rows),
     ]),
+    el("p", {
+      class: "muted",
+      text: `The remaining ${Math.max(0, (round.turns ?? 0) - 1)} turns stay hidden until you commit.`,
+    }),
   ];
 }
 

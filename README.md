@@ -8,7 +8,7 @@ Five daily games that run as one codebase and one shared rules engine.
 | --- | --- | --- | --- |
 | Daily Numbers | daily | 10 | Use three pool numbers and two operators to hit the target |
 | Prediction League | daily | 100 | Forecast a fact about today's Numbers solution, with stated confidence |
-| Faction War | daily | 25 | Back one of three factions against the crowd |
+| Faction War | daily | 25 | Read the opening turn, then commit to the faction you think takes the war |
 | Daily Mystery | daily | 15 | Accuse the one suspect every clue fails to exclude |
 | Community Market | daily | 20 | Trade three goods within budget and holding capacity |
 
@@ -16,7 +16,7 @@ Five daily games that run as one codebase and one shared rules engine.
 
 ```bash
 npm install
-npm run verify     # 138 tests, then a production build into dist/
+npm run verify     # 142 tests, then a production build into dist/
 npm run dev        # play locally
 ```
 
@@ -45,9 +45,20 @@ npm run dev        # play locally
 3. `submit()` never throws; malformed input returns `accepted: false`.
 4. Points are always integers within `[0, meta.maxPoints]`.
 5. Every round is provably solvable, and a test proves it.
-6. `meta.maxPoints` is actually reachable, and a test proves it. Two games shipped
-   broken scales before this was enforced: the market could score at most 8 of 40,
-   and prediction resolved by coin flip instead of from the puzzle.
+6. `meta.maxPoints` is actually reachable, and a test proves it.
+7. No game may be winnable by reading the public board. A test pins each game's
+   difficulty band.
+
+### Defects found by measuring, after the games already "worked"
+
+Every game passed its tests while still being broken as a game. Measurement caught all
+three; each now has a regression test:
+
+| Game | Defect | Evidence | Fix |
+| --- | --- | --- | --- |
+| Community Market | `capacity` counted buy and sell legs together | best possible day scored **8 of 40** | capacity is a holding limit; ceiling is 20 and proven reachable |
+| Prediction League | outcome came from an independent random draw | **213 yes / 187 no** over 400 days — a coin flip | questions resolve against the day's Numbers solution; every template tested to a 20-80% base rate |
+| Faction War | every turn's crowd votes were published | naive "back the leader" won **200/200 = 100%** | only the opening turn is public; reading it now wins **69.5%**, blind picks 33.7% |
 
 ### Cross-game design
 
