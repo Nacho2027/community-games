@@ -3,12 +3,17 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "login": "devvit-cli login",
     "build": "npm --prefix .. run build",
-    "upload": "devvit upload",
-    "playtest": "devvit playtest"
+    "verify": "npm --prefix .. run verify",
+    "upload": "npm run verify && npm run build && devvit-cli upload",
+    "playtest": "devvit-cli playtest",
+    "publish": "devvit-cli publish",
+    "products": "devvit-cli products add",
+    "whoami": "devvit-cli whoami"
   },
   "dependencies": {
-    "@devvit/web": "latest"
+    "@devvit/web": "^0.14.4"
   },
   "devDependencies": {
     "@devvit/cli": "^0.14.4"

@@ -29,21 +29,27 @@ Requirements:
 - A dedicated, non-test subreddit you moderate
 - Node 22+
 
-Steps:
+The CLI is already installed and wired into scripts, so this is a single command:
 
 ```bash
-npm i -g devvit            # or: npx devvit
-devvit login
-npm run build              # produces dist/ that devvit.json points at
-cd reddit && devvit upload && devvit playtest <your-test-subreddit>
+cd reddit
+npm run login      # only step that needs you: opens reddit.com in a browser
+npm run upload     # runs the full test suite, builds, then uploads
+npm run playtest   # installs to your test subreddit
 ```
 
-Then, for release:
+`npm run upload` deliberately runs `npm run verify` first, so a failing test can never be
+uploaded to Reddit.
+
+For release:
 
 ```bash
-cd reddit && devvit publish          # unlisted, installable by moderators
-cd reddit && devvit publish --public # request App Directory listing
+npm run publish                        # unlisted, installable by moderators
+npx devvit-cli publish --public        # request App Directory listing
 ```
+
+Confirm the login state at any time with `npm run whoami`. Verified behaviour before
+login: `npm run whoami` reports "Not currently logged in", and `npm run build` succeeds.
 
 Reddit review typically targets 1-2 business days for updates; new apps and apps that
 use payments or external fetch take longer.
